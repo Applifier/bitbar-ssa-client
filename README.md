@@ -4,7 +4,7 @@
    ./testdroid_cmdline.sh OPTIONS
 ## OPTIONS:
 	 -h	Show this message
-	 -z	The tests-folder which will be archived and sent to testdroid (required)
+	 -z	Path to the tests-folder which will be archived and sent to testdroid (required)
 	 -u	Username (required, can also use API-key here)
 	 -p	Password (required unless using API-key)
 	 -t	Testdroid project name (required)
@@ -18,4 +18,4 @@
 	 -x	Set device completion threshold in percentage [0-100], the percentage of devices in device group that need to complete for the test run to complete (impacts exit value)
 	 -v	Verbose
 ## Example:
-	./testdroid_cmdline.sh -u you@yourdomain.com -p hunter2 -t "Example test Project" -r "Nightly run, Monday" -a path/to/build.apk
+	./testdroid_cmdline.sh -u you@yourdomain.com -p hunter2 -t "Example test Project" -r "Nightly run, Monday" -a path/to/build.apk -z ../path_to_my_test_folder
