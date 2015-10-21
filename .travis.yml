@@ -1,0 +1,28 @@
+language: android
+addons:
+  apt:
+    packages:
+      - bc
+      - zip
+      - curl
+env:
+  global: >
+    - TD_BUILD="unity-ads/android/example/build/outputs/apk/example-debug.apk"
+    - TD_RUN_NAME="Travis iTests-test No.${TRAVIS_BUILD_NUMBER} $TRAVIS_BRANCH"
+    - TD_BASE_CMD='./testdroid_cmdline.sh -u $TD_USERNAME -p "$TD_PASSWORD" -t "$TD_PROJECT" -a "$TD_BUILD" -r "$TD_RUN_NAME" -z fake_test_dir
+    - TD_BASE_CMD_API_KEY='./testdroid_cmdline.sh -u $TD_API_TOKEN -t "$TD_PROJECT" -a "$TD_BUILD" -r "$TD_RUN_NAME" -z fake_test_dir
+    - CMD_TD_LIST="$TD_BASE_CMD -l"
+    - CMD_TD_LIST_API_KEY="$TD_BASE_CMD_API_KEY -l"
+    - CMD_TD_SIMULATE="$TD_BASE_CMD -d $TD_DEVICE_GROUP_ID -s"
+    - CMD_TD_SIMULATE_API_KEY="$TD_BASE_CMD_API_KEY -d $TD_DEVICE_GROUP_ID -s"
+install:
+  - git clone https://github.com/Applifier/unity-ads unity-ads
+  - (cd unity-ads/android/example ; gradle build)
+  - mkdir $
+script:
+  - cd testdroid-server-side-tests/
+  - eval $CMD_TD_LIST
+  - eval $CMD_TD_LIST_API_KEY
+  - eval $CMD_TD_SIMULATE
+  - eval $CMD_TD_SIMULATE_API_KEY
+sudo: false
