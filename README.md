@@ -19,3 +19,7 @@
 	 -v	Verbose
 ## Example:
 	./testdroid_cmdline.sh -u you@yourdomain.com -p hunter2 -t "Example test Project" -r "Nightly run, Monday" -a path/to/build.apk -z ../path_to_my_test_folder
+
+
+## For an example with test application and appium tests (mocha.js) please have a look at this repository
+https://github.com/ujappelbe/testdroid-ssa-client-example
