@@ -11,6 +11,9 @@ ios_start_script='run-tests-ios.sh'
 android_start_script='run-tests-android.sh'
 generic_start_script='run-tests.sh'
 
+# Work from this directory
+cd "$(dirname "$0")"
+
 # Consts
 TD_CLOUD_BASE_URL="https://cloud.testdroid.com"
 TD_TOKEN_URL="${TD_CLOUD_BASE_URL}/oauth/token"
@@ -201,6 +204,10 @@ function upload_app_to_cloud {
     prettyp "ERROR: Uploading of app failed. Response was: \"$response\""
     exit 4
   fi
+  if [ "$app_upload_id" == "null" ]; then
+    prettyp "ERROR: Uploading of app failed. Response was: \"$response\""
+    exit 4
+  fi
   prettyp "Uploaded \"${full_app_path}\""
 }
 
@@ -217,6 +224,10 @@ function upload_test_archive_to_cloud {
   response=$(auth_curl -POST -F file=@"${full_test_path}" "${td_upload_url}")
   test_upload_id=$(echo "$response" | jq '.id')
   if [ -z "$test_upload_id" ]; then
+    prettyp "ERROR: Uploading of app failed. Response was: \"$response\""
+    exit 5
+  fi
+  if [ "$test_upload_id" == "null" ]; then
     prettyp "ERROR: Uploading of app failed. Response was: \"$response\""
     exit 5
   fi
