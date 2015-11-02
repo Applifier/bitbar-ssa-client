@@ -15,6 +15,14 @@ generic_start_script='run-tests.sh'
 cd "$(dirname "$0")"
 
 # Consts
+CLEANUP_FILES=(
+  'node_modules'
+  'screenshots'
+  'TEST-all.xml'
+  'logcat.log'
+  'console.log'
+  'syslog.log'
+)
 TD_CLOUD_BASE_URL="https://cloud.testdroid.com"
 TD_TOKEN_URL="${TD_CLOUD_BASE_URL}/oauth/token"
 TD_PROJECTS_URL="${TD_CLOUD_BASE_URL}/api/v2/me/projects"
@@ -362,8 +370,11 @@ if [ $? -ne 0 ]; then echo "Please install 'bc' before running script." ; usage 
 # Create test.zip
 mv ${TEST_ZIP_FILE} test_previous.zip
 zip_temp_dir="testzip"
-rm -rf "${zip_temp_dir}"
-cp -rf "${TEST_ARCHIVE_FOLDER}" "${zip_temp_dir}"
+rm -rf "${zip_temp_dir:?}"
+cp -rf "${TEST_ARCHIVE_FOLDER:?}" "${zip_temp_dir:?}"
+for i in "${CLEANUP_FILES[@]}"; do
+  rm -rf "${zip_temp_dir:?}/${i:?}"
+done
 
 cd $zip_temp_dir
 
