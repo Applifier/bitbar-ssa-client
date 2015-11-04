@@ -315,7 +315,7 @@ while getopts hvslu:p:t:r:a:d:c:f:x:z: OPTIONS; do
     h ) usage; exit ;;
     v ) verbose ;;
     \? ) echo "Unknown option -$OPTARG" >&2 ; exit 1;;
-    : ) echo "Missing required argument for -$OPTARG" >&2 ; exit1;;
+    : ) echo "Missing required argument for -$OPTARG" >&2 ; exit 1;;
   esac
 done
 
