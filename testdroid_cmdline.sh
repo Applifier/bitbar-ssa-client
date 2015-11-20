@@ -297,6 +297,45 @@ function start_test_run {
   echo "$test_run_id"
 }
 
+########################################
+# Get all test results and files
+# Arguments:
+#   test_run_id
+#   device_run_id
+# Returns:
+#   Void (writes files to subfolder 'results/')
+#########################################
+function get_result_file {
+  test_run_id="$1"
+  device_run_id="$2"
+  test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
+  junit_url="$test_run_item_url/device-runs/$device_run_id/junit.xml"
+  log_url="$test_run_item_url/device-runs/$device_run_id/logs"
+  mkdir -p "results/${device_run_id:?}"
+  auth_curl "$junit_url" --output "results/${device_run_id}/junit.xml"
+  auth_curl "$log_url" --output "results/${device_run_id}/log.txt"
+}
+
+
+########################################
+# Get all test results and files
+# Arguments:
+#   test_run_id
+# Returns:
+#   Void (writes files to subfolder 'results/')
+#########################################
+function get_result_files {
+  echo "let's do this"
+  test_run_id=$1
+  device_runs_url=$(url_from_template "${TD_TEST_DEVICE_RUN_URL_TEMPLATE}" "${test_run_id}")
+  response=$(auth_curl "${device_runs_url}")
+  device_run_ids=$(echo "$response" | jq '.data[].id')
+  for device_run_id in $device_run_ids; do
+    get_result_file "$test_run_id" "$device_run_id"
+  done
+}
+
+
 # Commandline arguments
 while getopts hvslu:p:t:r:a:d:c:f:x:z: OPTIONS; do
   case $OPTIONS in
@@ -443,6 +482,8 @@ while [ 1 -ne 2 ]; do
       executed_percent=$( rational_to_percent "$(jq '.executionRatio' ${test_run_status_tmp_file})")
       success_percent=$( rational_to_percent "$(jq '.successRatio' ${test_run_status_tmp_file})")
       echo ; prettyp "Test Finished!\nDevices: ${device_count}, Executed-precentage: ${executed_percent}%, Passed-percentage: ${success_percent}%, results at: ${test_run_browser_url}"
+      echo ;prettyp "Getting test jUnit xml results"
+      get_result_files "$test_run_id"
       if (( $(bc <<< "$FAIL_PASSED_THRESHOLD > $success_percent") )); then
         prettyp "Test failed, required a success percentage of ${FAIL_PASSED_THRESHOLD}%, test was at ${success_percent}%"
         exit 150
