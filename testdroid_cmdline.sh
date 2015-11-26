@@ -312,8 +312,8 @@ function get_result_file {
   junit_url="$test_run_item_url/device-runs/$device_run_id/junit.xml"
   log_url="$test_run_item_url/device-runs/$device_run_id/logs"
   mkdir -p "results/${device_run_id:?}"
-  auth_curl "$junit_url" --output "results/${device_run_id}/junit.xml"
-  auth_curl "$log_url" --output "results/${device_run_id}/log.txt"
+  auth_curl "$junit_url" --fail --output "results/${device_run_id}/junit.xml"
+  auth_curl "$log_url" --fail --output "results/${device_run_id}/log.txt"
 }
 
 
