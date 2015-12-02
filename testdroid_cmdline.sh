@@ -309,12 +309,13 @@ function get_result_file {
   test_run_id="$1"
   device_run_id="$2"
   test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
-  junit_url="$test_run_item_url/device-runs/$device_run_id/junit.xml"
-  log_url="$test_run_item_url/device-runs/$device_run_id/logs"
-  mkdir -p "results/${device_run_id:?}"
+  device_info_url="$test_run_item_url/device-runs/$device_run_id"
+  junit_url="$device_info_url/junit.xml"
+  log_url="$device_info_url/logs"
+  mkdir -p "results"
   auth_curl "$junit_url" --fail --output "results/${device_run_id}_junit.xml"
   auth_curl "$log_url" --fail --output "results/${device_run_id}_log.txt"
-  auth_curl "$test_run_item_url" --fail --output "results/${device_run_id}_run_info.json"
+  auth_curl "$device_info_url" --fail --output "results/${device_run_id}_run_info.json"
 }
 
 
