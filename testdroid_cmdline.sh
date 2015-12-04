@@ -298,6 +298,27 @@ function start_test_run {
 }
 
 ########################################
+# Get human readable name for device
+# Arguments:
+#   test_run_id
+#   device_run_id
+# Returns:
+#   String (human readable device id (or device_run_id if failure))
+#########################################
+function get_device_human_name {
+  test_run_id="$1"
+  device_run_id="$2"
+  test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
+  device_info_url="$test_run_item_url/device-runs/$device_run_id"
+  device_info_json=$(auth_curl "$device_info_url" --fail)
+  human_name=$(echo "$device_info_json" |jq -r '.deviceName + "-API\(.softwareVersion.apiLevel)"' |sed -e s/[^a-zA-Z0-9_-]/_/g)
+  safe_human_name=$(sed -e s/[^a-zA-Z0-9_-]/_/g <<< "$human_name")
+  safe_human_name=${safe_human_name:=$device_run_id}
+  echo "$safe_human_name-$device_run_id"
+}
+
+
+########################################
 # Get all test results and files
 # Arguments:
 #   test_run_id
@@ -313,9 +334,10 @@ function get_result_file {
   junit_url="$device_info_url/junit.xml"
   log_url="$device_info_url/logs"
   mkdir -p "results"
-  auth_curl "$junit_url" --fail --output "results/${device_run_id}_junit.xml"
-  auth_curl "$log_url" --fail --output "results/${device_run_id}_log.txt"
-  auth_curl "$device_info_url" --fail --output "results/${device_run_id}_run_info.json"
+  device_human_name="$(get_device_human_name "$test_run_id" "$device_run_id")"
+  auth_curl "$junit_url" --fail --output "results/${device_human_name}_junit.xml"
+  auth_curl "$log_url" --fail --output "results/${device_human_name}_log.txt"
+  auth_curl "$device_info_url" --fail --output "results/${device_human_name}_run_info.json"
 }
 
 
