@@ -1,4 +1,7 @@
 _test_run_status.json
-test.zip
+*.zip
 testzip/*
 *~
+results/
+appium.log
+
