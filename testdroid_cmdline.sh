@@ -12,7 +12,7 @@ android_start_script='run-tests-android.sh'
 generic_start_script='run-tests.sh'
 
 # Work from this directory
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit
 
 # Consts
 CLEANUP_FILES=(
@@ -298,24 +298,23 @@ function start_test_run {
 }
 
 ########################################
-# Get all test results and files
+# Get human readable name for device
 # Arguments:
 #   test_run_id
 #   device_run_id
 # Returns:
-#   Void (writes files to subfolder 'results/')
+#   String (human readable device id (or device_run_id if failure))
 #########################################
-function get_result_file {
+function get_device_human_name {
   test_run_id="$1"
   device_run_id="$2"
   test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
   device_info_url="$test_run_item_url/device-runs/$device_run_id"
-  junit_url="$device_info_url/junit.xml"
-  log_url="$device_info_url/logs"
-  mkdir -p "results"
-  auth_curl "$junit_url" --fail --output "results/${device_run_id}_junit.xml"
-  auth_curl "$log_url" --fail --output "results/${device_run_id}_log.txt"
-  auth_curl "$device_info_url" --fail --output "results/${device_run_id}_run_info.json"
+  device_info_json=$(auth_curl "$device_info_url" --fail)
+  human_name=$(echo "$device_info_json" |jq -r '.deviceName + "-API\(.softwareVersion.apiLevel)"' |sed -e s/[^a-zA-Z0-9_-]/_/g)
+  safe_human_name=$(sed -e s/[^a-zA-Z0-9_-]/_/g <<< "$human_name")
+  safe_human_name=${safe_human_name:=$device_run_id}
+  echo "$safe_human_name-$device_run_id"
 }
 
 
@@ -333,8 +332,53 @@ function get_result_files {
   response=$(auth_curl "${device_runs_url}")
   device_run_ids=$(echo "$response" | jq '.data[].id')
   for device_run_id in $device_run_ids; do
-    get_result_file "$test_run_id" "$device_run_id"
+    get_device_result_files "$test_run_id" "$device_run_id"
   done
+}
+
+
+########################################
+# Get all test results and files for the device
+# Arguments:
+#   test_run_id
+#   device_run_id
+# Returns:
+#   Void (writes files to subfolder 'results/')
+#########################################
+function get_device_result_files {
+  mkdir -p "results"
+  test_run_id="$1"
+  device_run_id="$2"
+  test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
+  device_info_url="$test_run_item_url/device-runs/$device_run_id"
+  device_session_id=$(auth_curl "$device_info_url" | jq ".deviceSessionId")
+  device_human_name="$(get_device_human_name "$test_run_id" "$device_run_id")"
+  device_session_files_url="$test_run_item_url/device-sessions/$device_session_id/output-file-set/files"
+  response=$(auth_curl "$device_session_files_url")
+  device_file_ids=$(echo "$response" | jq '.data[] |"\(.id);\(.name)"')
+  for file_specs in $device_file_ids; do
+    get_device_result_file "$test_run_id" "$device_run_id" "$device_human_name" "$file_specs"
+  done
+}
+
+########################################
+# Get a device result file
+# Arguments:
+#   test_run_id
+#   device_run_id
+#   device_human_name
+#   semicolon-separated string like "$file_id;$filename"
+# Returns:
+#   Void (writes files to subfolder 'results/')
+#########################################
+function get_device_result_file {
+  test_run_id="$1"
+  device_run_id="$2"
+  device_human_name="$3"
+  file_id=$(sed -e 's/"//g' -e 's/;.*//g' <<< "$4")
+  filename=$(sed -e 's/"//g' -e 's/.*;//g' <<< "$4")
+  file_item_url="${TD_CLOUD_BASE_URL}/api/me/files/$file_id/file"
+  auth_curl "$file_item_url" --fail --output "results/${device_run_id}_${device_human_name}_$filename"
 }
 
 
@@ -375,7 +419,7 @@ if [ -z APP_PATH ]; then
 else
   orgdir=$(pwd)
   FULL_APP_PATH=$(get_full_path "${APP_PATH}")
-  cd "$orgdir"
+  cd "$orgdir" || exit 33
   if [ ! -f "${FULL_APP_PATH}" ]; then
     echo "App file '${APP_PATH}' does not exist!"
     exit 2
@@ -417,7 +461,7 @@ for i in "${CLEANUP_FILES[@]}"; do
   rm -rf "${zip_temp_dir:?}/${i:?}"
 done
 
-cd $zip_temp_dir
+cd $zip_temp_dir || exit 34
 
 if [ ! -f "$generic_start_script" ]; then
   case "${PLATFORM}" in
