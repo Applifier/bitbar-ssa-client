@@ -279,7 +279,7 @@ function setup_project_settings {
     prettyp "Unable to set scheduler '${SCHEDULER}' for project! Exiting. Response was '$response'"
     exit 11
   fi
-  if [ "$used_timeout" == "$PROJECT_TIMEOUT" ]; then
+  if [ "$used_project_timeout" == "$PROJECT_TIMEOUT" ]; then
     prettyp "Using timeout '$used_timeout'"
   else
     prettyp "Unable to set timeout '${PROJECT_TIMEOUT}' for project! Exiting. Response was '$response'"
