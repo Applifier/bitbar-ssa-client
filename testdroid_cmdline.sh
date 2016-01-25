@@ -280,7 +280,7 @@ function setup_project_settings {
     exit 11
   fi
   if [ "$used_project_timeout" == "$PROJECT_TIMEOUT" ]; then
-    prettyp "Using timeout '$used_timeout'"
+    prettyp "Using timeout '$used_project_timeout'"
   else
     prettyp "Unable to set timeout '${PROJECT_TIMEOUT}' for project! Exiting. Response was '$response'"
     exit 11
