@@ -14,6 +14,7 @@
 	 -l	List Testdroid deviceGroups
 	 -s	Simulate (Upload tests and app and configure project. Don't actually run test)
 	 -c	Set scheduler for test, options are [PARALLEL, SERIAL, SINGLE] (default: PARALLEL)
+	 -i	Set timeout value for project in seconds. Will use 600s (10min) unless specified
 	 -f	Set fail threshold in percentage [0-100], the percentage of test steps that have to pass for the test run to succeed (impacts exit value)
 	 -x	Set device completion threshold in percentage [0-100], the percentage of devices in device group that need to complete for the test run to complete (impacts exit value)
 	 -v	Verbose

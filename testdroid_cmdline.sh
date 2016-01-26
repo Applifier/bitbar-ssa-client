@@ -42,6 +42,7 @@ TOKEN_TMP_FILE="_token.json"
 PLATFORM="NOT-SET"
 SIMULATE=0
 SCHEDULER="PARALLEL"
+PROJECT_TIMEOUT=600
 FAIL_PASSED_THRESHOLD=0
 DEVICES_RUN_THRESHOLD=0
 CONNECTION_FAILURES_LIMIT=20
@@ -61,6 +62,7 @@ function usage(){
   echo -e "\t -l\tList Testdroid deviceGroups"
   echo -e "\t -s\tSimulate (Upload tests and app and configure project. Don't actually run test)"
   echo -e "\t -c\tSet scheduler for test, options are [PARALLEL, SERIAL, SINGLE] (default: PARALLEL)"
+  echo -e "\t -i\tSet timeout value for project in seconds. Will use 600s (10min) unless specified"
   echo -e "\t -f\tSet fail threshold in percentage [0-100], the percentage of test steps that have to pass for the test run to succeed (impacts exit value)"
   echo -e "\t -x\tSet device completion threshold in percentage [0-100], the percentage of devices in device group that need to complete for the test run to complete (impacts exit value)"
   echo -e "\t -v\tVerbose"
@@ -243,8 +245,8 @@ function upload_test_archive_to_cloud {
 }
 
 ########################################
-# Setup project for requested device group and
-# device scheduler
+# Setup project for requested device group,
+# device scheduler and project timeout
 # Arguments:
 #   device_group_id
 # Returns:
@@ -253,7 +255,7 @@ function upload_test_archive_to_cloud {
 function setup_project_settings {
   device_group_id=$1
   project_config_url=$(url_from_template "${TD_CONFIGURE_PROJECT_URL_TEMPLATE}")
-  flags_to_alter="-F scheduler=$SCHEDULER"
+  flags_to_alter="-F scheduler=${SCHEDULER:?} -F timeout=${PROJECT_TIMEOUT:?}"
   if [ -z "$DEVICE_GROUP_ID" ]; then
     prettyp "Device group id not specified, using previous value"
   else
@@ -262,6 +264,7 @@ function setup_project_settings {
   response=$(auth_curl -POST ${flags_to_alter} "${project_config_url}")
   used_device_group_id=$(echo "$response" | jq '.usedDeviceGroupId')
   used_scheduler=$(echo "$response" | jq -r '.scheduler')
+  used_project_timeout=$(echo "$response" | jq -r '.timeout')
   if [ -n "$DEVICE_GROUP_ID" ]; then
     if [ "$used_device_group_id" == "$device_group_id" ]; then
       prettyp "Using device group $used_device_group_id"
@@ -273,7 +276,13 @@ function setup_project_settings {
   if [ "$used_scheduler" == "$SCHEDULER" ]; then
     prettyp "Using scheduler '$used_scheduler'"
   else
-    prettyp "Unable to set scheduler for project! Exiting. Response was '$response'"
+    prettyp "Unable to set scheduler '${SCHEDULER}' for project! Exiting. Response was '$response'"
+    exit 11
+  fi
+  if [ "$used_project_timeout" == "$PROJECT_TIMEOUT" ]; then
+    prettyp "Using timeout '$used_project_timeout'"
+  else
+    prettyp "Unable to set timeout '${PROJECT_TIMEOUT}' for project! Exiting. Response was '$response'"
     exit 11
   fi
 }
@@ -383,7 +392,7 @@ function get_device_result_file {
 
 
 # Commandline arguments
-while getopts hvslu:p:t:r:a:d:c:f:x:z: OPTIONS; do
+while getopts hvslu:p:t:r:a:d:c:i:f:x:z: OPTIONS; do
   case $OPTIONS in
     z ) TEST_ARCHIVE_FOLDER=$OPTARG ;;
     u ) TD_USER=$OPTARG ;;
@@ -394,6 +403,7 @@ while getopts hvslu:p:t:r:a:d:c:f:x:z: OPTIONS; do
     d ) DEVICE_GROUP_ID=$OPTARG ;;
     l ) LIST_DEVICES_ONLY=1 ;;
     c ) SCHEDULER=$OPTARG ;;
+    i ) PROJECT_TIMEOUT=$OPTARG ;;
     s ) SIMULATE=1 ;;
     f ) FAIL_PASSED_THRESHOLD=$OPTARG ;;
     x ) DEVICES_RUN_THRESHOLD=$OPTARG ;;
