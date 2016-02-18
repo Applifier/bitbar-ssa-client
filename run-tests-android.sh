@@ -10,7 +10,7 @@ echo "Extracting tests.zip..."
 unzip tests.zip
 
 echo "Starting Appium ..."
-/opt/appium/appium/bin/appium.js >appium.log 2>&1 &
+/opt/appium/appium/bin/appium.js --log-no-colors --log-timestamp >appium.log 2>&1 &
 
 sleep 5 # Sleep for appium to launch properly
 

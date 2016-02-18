@@ -11,7 +11,7 @@ echo "Extracting tests.zip..."
 unzip tests.zip
 
 echo "Starting Appium ..."
-/opt/appium/bin/appium.js -U ${UDID} --command-timeout 120 >appium.log 2>&1 &
+/opt/appium/bin/appium.js -U ${UDID} --command-timeout 120 --log-no-colors --log-timestamp >appium.log 2>&1 &
 sleep 10 # Sleep for appium to launch properly
 
 ##### Cloud testrun dependencies end.
