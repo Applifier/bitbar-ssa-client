@@ -42,6 +42,7 @@ TOKEN_TMP_FILE="_token.json"
 PLATFORM="NOT-SET"
 SIMULATE=0
 SCHEDULER="PARALLEL"
+TEST_RESULTS_DIR="results"
 PROJECT_TIMEOUT=600
 FAIL_PASSED_THRESHOLD=0
 DEVICES_RUN_THRESHOLD=0
@@ -326,8 +327,6 @@ function get_device_human_name {
   echo "$safe_human_name-$device_run_id"
 }
 
-TEST_RESULTS_DIR="results/"
-
 ########################################
 # Get all test results and files
 # Arguments:
@@ -356,7 +355,7 @@ function get_result_files {
 #   Void (writes files to subfolder TEST_RESULTS_DIR)
 #########################################
 function get_device_result_files {
-  rm -rf $TEST_RESULTS_DIR
+  rm -rf "${TEST_RESULTS_DIR:?}"
   mkdir -p $TEST_RESULTS_DIR
   test_run_id="$1"
   device_run_id="$2"
@@ -380,8 +379,19 @@ function get_device_result_files {
 ########################################
 function get_total_failures {
   errors=$(grep "errors=" ${TEST_RESULTS_DIR}/*.xml | sed s/.*errors=\"//g | sed s/\".*//g | awk '{ SUM += $1} END { print SUM }')
+  errors=${errors:=0}
   failures=$(grep "failures=" ${TEST_RESULTS_DIR}/*.xml | sed s/.*failures=\"//g | sed s/\".*//g | awk '{ SUM += $1} END { print SUM }')
-  echo $(($errors+$failures))
+  failures=${failures:=0}
+
+  if [[ $errors > 0 ]] && [[ $failures > 0 ]]; then
+    echo $(($errors+$failures))
+  elif [[ $errors > 0 ]]; then
+    echo $errors
+  elif [[ $failures > 0 ]]; then
+    echo $failures
+  else
+    echo 0
+  fi
 }
 
 
@@ -556,7 +566,7 @@ while [ 1 -ne 2 ]; do
 
       failures=$(get_total_failures)
 
-      if [ $failures > 0 ]; then
+      if [[ $((failures)) > 0 ]]; then
         prettyp "Total test failures: $failures"
         exit 150
       fi
