@@ -344,8 +344,7 @@ function get_result_files {
     get_device_result_files "$test_run_id" "$device_run_id"
   done
 
-  files=(${TEST_RESULTS_DIR}/*.xml)
-  if [ ${#files[@]} -eq 0 ]; then
+  if [ -z "$(ls -A ${TEST_RESULTS_DIR}/*.xml)" ]; then
     echo "no junit results files could be found"
     exit 140
   fi
