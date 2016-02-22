@@ -340,6 +340,8 @@ function get_result_files {
   device_runs_url=$(url_from_template "${TD_TEST_DEVICE_RUN_URL_TEMPLATE}" "${test_run_id}")
   response=$(auth_curl "${device_runs_url}")
   device_run_ids=$(echo "$response" | jq '.data[].id')
+  rm -rf "${TEST_RESULTS_DIR:?}"
+  mkdir -p $TEST_RESULTS_DIR
   for device_run_id in $device_run_ids; do
     get_device_result_files "$test_run_id" "$device_run_id"
   done
@@ -360,8 +362,6 @@ function get_result_files {
 #   Void (writes files to subfolder TEST_RESULTS_DIR)
 #########################################
 function get_device_result_files {
-  rm -rf "${TEST_RESULTS_DIR:?}"
-  mkdir -p $TEST_RESULTS_DIR
   test_run_id="$1"
   device_run_id="$2"
   test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
