@@ -42,6 +42,7 @@ TOKEN_TMP_FILE="_token.json"
 PLATFORM="NOT-SET"
 SIMULATE=0
 SCHEDULER="PARALLEL"
+TEST_RESULTS_DIR="results"
 PROJECT_TIMEOUT=600
 FAIL_PASSED_THRESHOLD=0
 DEVICES_RUN_THRESHOLD=0
@@ -326,13 +327,12 @@ function get_device_human_name {
   echo "$safe_human_name-$device_run_id"
 }
 
-
 ########################################
 # Get all test results and files
 # Arguments:
 #   test_run_id
 # Returns:
-#   Void (writes files to subfolder 'results/')
+#   Void (writes files to subfolder TEST_RESULTS_DIR)
 #########################################
 function get_result_files {
   echo "let's do this"
@@ -343,6 +343,12 @@ function get_result_files {
   for device_run_id in $device_run_ids; do
     get_device_result_files "$test_run_id" "$device_run_id"
   done
+
+  files=(${TEST_RESULTS_DIR}/*.xml)
+  if [ ${#files[@]} -eq 0 ]; then
+    echo "no junit results files could be found"
+    exit 140
+  fi
 }
 
 
@@ -352,10 +358,11 @@ function get_result_files {
 #   test_run_id
 #   device_run_id
 # Returns:
-#   Void (writes files to subfolder 'results/')
+#   Void (writes files to subfolder TEST_RESULTS_DIR)
 #########################################
 function get_device_result_files {
-  mkdir -p "results"
+  rm -rf "${TEST_RESULTS_DIR:?}"
+  mkdir -p $TEST_RESULTS_DIR
   test_run_id="$1"
   device_run_id="$2"
   test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
@@ -370,6 +377,30 @@ function get_device_result_files {
   done
 }
 
+
+########################################
+# Count all errors and failures in junit xml results
+# Returns:
+#  Total count
+########################################
+function get_total_failures {
+  errors=$(grep "errors=" ${TEST_RESULTS_DIR}/*.xml | sed s/.*errors=\"//g | sed s/\".*//g | awk '{ SUM += $1} END { print SUM }')
+  errors=${errors:=0}
+  failures=$(grep "failures=" ${TEST_RESULTS_DIR}/*.xml | sed s/.*failures=\"//g | sed s/\".*//g | awk '{ SUM += $1} END { print SUM }')
+  failures=${failures:=0}
+
+  if [[ $errors > 0 ]] && [[ $failures > 0 ]]; then
+    echo $(($errors+$failures))
+  elif [[ $errors > 0 ]]; then
+    echo $errors
+  elif [[ $failures > 0 ]]; then
+    echo $failures
+  else
+    echo 0
+  fi
+}
+
+
 ########################################
 # Get a device result file
 # Arguments:
@@ -378,7 +409,7 @@ function get_device_result_files {
 #   device_human_name
 #   semicolon-separated string like "$file_id;$filename"
 # Returns:
-#   Void (writes files to subfolder 'results/')
+#   Void (writes files to subfolder TEST_RESULTS_DIR)
 #########################################
 function get_device_result_file {
   test_run_id="$1"
@@ -387,7 +418,7 @@ function get_device_result_file {
   file_id=$(sed -e 's/"//g' -e 's/;.*//g' <<< "$4")
   filename=$(sed -e 's/"//g' -e 's/.*;//g' <<< "$4")
   file_item_url="${TD_CLOUD_BASE_URL}/api/me/files/$file_id/file"
-  auth_curl "$file_item_url" --fail --output "results/${device_run_id}_${device_human_name}_$filename"
+  auth_curl "$file_item_url" --fail --output "${TEST_RESULTS_DIR}/${device_run_id}_${device_human_name}_$filename"
 }
 
 
@@ -535,18 +566,15 @@ while [ 1 -ne 2 ]; do
 
   case "$(echo "$test_status" |xargs)" in
     "FINISHED" )
-      executed_percent=$( rational_to_percent "$(jq '.executionRatio' ${test_run_status_tmp_file})")
-      success_percent=$( rational_to_percent "$(jq '.successRatio' ${test_run_status_tmp_file})")
-      echo ; prettyp "Test Finished!\nDevices: ${device_count}, Executed-precentage: ${executed_percent}%, Passed-percentage: ${success_percent}%, results at: ${test_run_browser_url}"
-      echo ;prettyp "Getting test jUnit xml results"
+
+      echo ; prettyp "Test Finished! Getting test jUnit xml results"
       get_result_files "$test_run_id"
-      if (( $(bc <<< "$FAIL_PASSED_THRESHOLD > $success_percent") )); then
-        prettyp "Test failed, required a success percentage of ${FAIL_PASSED_THRESHOLD}%, test was at ${success_percent}%"
+
+      failures=$(get_total_failures)
+
+      if [[ $((failures)) > 0 ]]; then
+        prettyp "Total test failures: $failures"
         exit 150
-      fi
-      if (( $(bc <<< "$DEVICES_RUN_THRESHOLD > $executed_percent") )); then
-        prettyp "Test failed, required a completion percentage of ${DEVICES_RUN_THRESHOLD}%, test was at ${executed_percent}%"
-        exit 151
       fi
 
       exit 0 ;;
