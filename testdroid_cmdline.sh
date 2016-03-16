@@ -447,7 +447,14 @@ done
 # Check args
 if [ -z "${TD_USER}" ]; then echo "Please specify username!" ; usage ; exit 1 ; fi
 if [ -z "${PROJECT_NAME}" ]; then echo "Please specify testdroid project name!" ; usage ; exit 1 ; fi
-if [ "${LIST_DEVICES_ONLY}" == "1" ]; then list_device_groups ; exit 0 ; fi
+
+if [ "${LIST_DEVICES_ONLY}" == "1" ]; then 
+  # Check that we have jq installed, listing devices requires jq
+  which jq
+  if [ $? -ne 0 ]; then echo "Please install 'jq' before running script." ; usage ; exit 101; fi
+  list_device_groups ; exit 0 ; 
+fi
+
 if [ -z "${APP_PATH}" ]; then echo "Please specify app path!" ; usage ; exit 1 ; fi
 if [ -z "${TEST_ARCHIVE_FOLDER}" ]; then echo "Please specify the folder containing the tests!" ; usage ; exit 1 ; fi
 
