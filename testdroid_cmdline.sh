@@ -26,8 +26,8 @@ CLEANUP_FILES=(
 TD_CLOUD_BASE_URL="https://cloud.testdroid.com"
 TD_TOKEN_URL="${TD_CLOUD_BASE_URL}/oauth/token"
 TD_PROJECTS_URL="${TD_CLOUD_BASE_URL}/api/v2/me/projects"
-TD_USER_DEVICE_GROUPS_URL="${TD_CLOUD_BASE_URL}/api/v2/me/device-groups"
-TD_PROJECT_DEVICE_GROUPS_URL_TEMPLATE="${TD_CLOUD_BASE_URL}/api/v2/me/projects/<projectId>/device-groups"
+TD_USER_DEVICE_GROUPS_URL="${TD_CLOUD_BASE_URL}/api/v2/me/device-groups?limit=999"
+TD_PROJECT_DEVICE_GROUPS_URL_TEMPLATE="${TD_CLOUD_BASE_URL}/api/v2/me/projects/<projectId>/device-groups?limit=999"
 TD_UPLOAD_APP_URL_TEMPLATE="${TD_CLOUD_BASE_URL}/api/v2/me/projects/<projectId>/files/application"
 TD_UPLOAD_TEST_URL_TEMPLATE="${TD_CLOUD_BASE_URL}/api/v2/me/projects/<projectId>/files/test"
 TD_CONFIGURE_PROJECT_URL_TEMPLATE="${TD_CLOUD_BASE_URL}/api/v2/me/projects/<projectId>/config"
@@ -448,11 +448,11 @@ done
 if [ -z "${TD_USER}" ]; then echo "Please specify username!" ; usage ; exit 1 ; fi
 if [ -z "${PROJECT_NAME}" ]; then echo "Please specify testdroid project name!" ; usage ; exit 1 ; fi
 
-if [ "${LIST_DEVICES_ONLY}" == "1" ]; then 
+if [ "${LIST_DEVICES_ONLY}" == "1" ]; then
   # Check that we have jq installed, listing devices requires jq
   which jq
   if [ $? -ne 0 ]; then echo "Please install 'jq' before running script." ; usage ; exit 101; fi
-  list_device_groups ; exit 0 ; 
+  list_device_groups ; exit 0 ;
 fi
 
 if [ -z "${APP_PATH}" ]; then echo "Please specify app path!" ; usage ; exit 1 ; fi
