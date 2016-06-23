@@ -12,7 +12,24 @@ unzip tests.zip
 echo "Starting Appium ..."
 /opt/appium/appium/bin/appium.js --log-no-colors --log-timestamp >appium.log 2>&1 &
 
-sleep 5 # Sleep for appium to launch properly
+echo -n "Waiting for Appium server to be ready "
+start_string="Appium REST http interface listener started"
+retry=30
+while [ $retry -gt 0 ]
+do
+  sleep 1
+  echo -n "."
+  if [ -n "$(grep -s "$start_string" appium.log)" ]; then
+    retry=0
+    echo " done"
+    echo $(grep "$start_string" appium.log)
+  else
+    ((retry--))
+    if [ $retry -eq 0 ]; then
+      echo " waited 30 seconds but server was not ready"
+    fi
+  fi
+done
 
 ##### Cloud testrun dependencies end.
 
