@@ -500,7 +500,7 @@ which bc
 if [ $? -ne 0 ]; then echo "Please install 'bc' before running script." ; usage ; exit 104; fi
 
 # Create test.zip
-mv ${TEST_ZIP_FILE} test_previous.zip
+mv ${TEST_ZIP_FILE} test_previous.zip 2>/dev/null
 zip_temp_dir="testzip"
 rm -rf "${zip_temp_dir:?}"
 cp -rf "${TEST_ARCHIVE_FOLDER:?}" "${zip_temp_dir:?}"
