@@ -344,6 +344,7 @@ function get_result_files {
   mkdir -p $TEST_RESULTS_DIR
   for device_run_id in $device_run_ids; do
     get_device_result_files "$test_run_id" "$device_run_id"
+    get_device_screenshots "$test_run_id" "$device_run_id"
   done
 
   if [ -z "$(ls -A ${TEST_RESULTS_DIR}/*.xml)" ]; then
@@ -418,6 +419,53 @@ function get_device_result_file {
   filename=$(sed -e 's/"//g' -e 's/.*;//g' <<< "$4")
   file_item_url="${TD_CLOUD_BASE_URL}/api/me/files/$file_id/file"
   auth_curl "$file_item_url" --fail --output "${TEST_RESULTS_DIR}/${device_run_id}_${device_human_name}_$filename"
+}
+
+
+########################################
+# Get all screenshots for a device
+# Arguments:
+#   test_run_id
+#   device_run_id
+#   device_human_name
+# Returns:
+#   Void (writes files to subfolder TEST_RESULTS_DIR)
+#########################################
+function get_device_screenshots {
+  test_run_id="$1"
+  device_run_id="$2"
+  device_human_name="$3"
+  test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
+  device_session_screenshots_url="$test_run_item_url/device-runs/$device_session_id/screenshots"
+  response=$(auth_curl "$device_session_screenshots_url")
+  device_screenshot_ids=$(echo "$response" | jq '.data[] |"\(.id);\(.originalName)"')
+  mkdir -p "${TEST_RESULTS_DIR}/screenshots/${device_human_name}"
+  for screenshot_specs in $device_screenshot_ids; do
+    get_device_screenshot "$test_run_id" "$device_run_id" "$device_human_name" "$file_specs"
+  done
+}
+
+
+########################################
+# Get a device screenshot file
+# Arguments:
+#   test_run_id
+#   device_run_id
+#   device_human_name
+#   semicolon-separated string like "$file_id;$filename"
+# Returns:
+#   Void (writes files to subfolder TEST_RESULTS_DIR)
+#########################################
+function get_device_screenshot_file {
+  test_run_id="$1"
+  device_run_id="$2"
+  device_human_name="$3"
+  file_id=$(sed -e 's/"//g' -e 's/;.*//g' <<< "$4")
+  filename=$(sed -e 's/"//g' -e 's/.*;//g' <<< "$4")
+  test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
+  file_item_url="${test_run_item_url}/device-runs/${device_session_id}/screenshots/${file_id}"
+
+  auth_curl "$file_item_url" --fail --output "${TEST_RESULTS_DIR}/screenshots/${device_human_name}/$filename"
 }
 
 
