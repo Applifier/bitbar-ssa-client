@@ -66,6 +66,7 @@ function usage(){
   echo -e "\t -i\tSet timeout value for project in seconds. Will use 600s (10min) unless specified"
   echo -e "\t -f\tSet fail threshold in percentage [0-100], the percentage of test steps that have to pass for the test run to succeed (impacts exit value)"
   echo -e "\t -x\tSet device completion threshold in percentage [0-100], the percentage of devices in device group that need to complete for the test run to complete (impacts exit value)"
+  echo -e "\t -n\tSpecify a test_run_id, client will only fetch those results and exit"
   echo -e "\t -v\tVerbose"
   echo -e "Example:"
   echo -e "\t$0 -u you@yourdomain.com -p hunter2 -t \"Example test Project\" -r \"Nightly run, Monday\" -a path/to/build.apk"
@@ -434,14 +435,14 @@ function get_device_result_file {
 function get_device_screenshots {
   test_run_id="$1"
   device_run_id="$2"
-  device_human_name="$3"
+  device_human_name="$(get_device_human_name "$test_run_id" "$device_run_id")"
   test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
   device_session_screenshots_url="$test_run_item_url/device-runs/$device_session_id/screenshots"
   response=$(auth_curl "$device_session_screenshots_url")
   device_screenshot_ids=$(echo "$response" | jq '.data[] |"\(.id);\(.originalName)"')
   mkdir -p "${TEST_RESULTS_DIR}/screenshots/${device_human_name}"
   for screenshot_specs in $device_screenshot_ids; do
-    get_device_screenshot_file "$test_run_id" "$device_run_id" "$device_human_name" "$file_specs"
+    get_device_screenshot_file "$test_run_id" "$device_run_id" "$device_human_name" "$screenshot_specs"
   done
 }
 
@@ -470,7 +471,7 @@ function get_device_screenshot_file {
 
 
 # Commandline arguments
-while getopts hvslu:p:t:r:a:d:c:i:f:x:z: OPTIONS; do
+while getopts hvslu:p:t:r:a:d:c:i:f:x:z:n: OPTIONS; do
   case $OPTIONS in
     z ) TEST_ARCHIVE_FOLDER=$OPTARG ;;
     u ) TD_USER=$OPTARG ;;
@@ -487,6 +488,7 @@ while getopts hvslu:p:t:r:a:d:c:i:f:x:z: OPTIONS; do
     x ) DEVICES_RUN_THRESHOLD=$OPTARG ;;
     h ) usage; exit ;;
     v ) verbose ;;
+    n ) RESULTS_RUN_ID=$OPTARG ;;
     \? ) echo "Unknown option -$OPTARG" >&2 ; exit 1;;
     : ) echo "Missing required argument for -$OPTARG" >&2 ; exit 1;;
   esac
@@ -501,6 +503,11 @@ if [ "${LIST_DEVICES_ONLY}" == "1" ]; then
   which jq
   if [ $? -ne 0 ]; then echo "Please install 'jq' before running script." ; usage ; exit 101; fi
   list_device_groups ; exit 0 ;
+fi
+
+if [ -n "${RESULTS_RUN_ID}" ]; then
+  get_result_files "$RESULTS_RUN_ID"
+  exit
 fi
 
 if [ -z "${APP_PATH}" ]; then echo "Please specify app path!" ; usage ; exit 1 ; fi
