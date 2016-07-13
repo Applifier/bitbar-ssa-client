@@ -441,7 +441,7 @@ function get_device_screenshots {
   device_screenshot_ids=$(echo "$response" | jq '.data[] |"\(.id);\(.originalName)"')
   mkdir -p "${TEST_RESULTS_DIR}/screenshots/${device_human_name}"
   for screenshot_specs in $device_screenshot_ids; do
-    get_device_screenshot "$test_run_id" "$device_run_id" "$device_human_name" "$file_specs"
+    get_device_screenshot_file "$test_run_id" "$device_run_id" "$device_human_name" "$file_specs"
   done
 }
 
