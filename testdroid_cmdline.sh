@@ -319,13 +319,48 @@ function start_test_run {
 function get_device_human_name {
   test_run_id="$1"
   device_run_id="$2"
-  test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
-  device_info_url="$test_run_item_url/device-runs/$device_run_id"
-  device_info_json=$(auth_curl "$device_info_url" --fail)
+  device_info_json=$(get_device_info_json $test_run_id $device_run_id)
   human_name=$(echo "$device_info_json" |jq -r '.deviceName + "-API\(.softwareVersion.apiLevel)"' |sed -e s/[^a-zA-Z0-9_-]/_/g)
   safe_human_name=$(sed -e s/[^a-zA-Z0-9_-]/_/g <<< "$human_name")
   safe_human_name=${safe_human_name:=$device_run_id}
   echo "$safe_human_name-$device_run_id"
+}
+
+########################################
+# Get device_info_json
+# Arguments:
+#   test_run_id
+#   device_run_id
+# Returns:
+#   String (json response for device_info)
+#########################################
+function get_device_info_json {
+  test_run_id="$1"
+  device_run_id="$2"
+  test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
+  device_info_url="$test_run_item_url/device-runs/$device_run_id"
+  device_info_json=$(auth_curl "$device_info_url" --fail)
+  echo "$device_info_json"
+}
+
+########################################
+# Check if device was excluded from testrun
+# Arguments:
+#   test_run_id
+#   device_run_id
+# Returns:
+#   bool (0 for false, 1 for true)
+#########################################
+function was_device_excluded {
+  test_run_id="$1"
+  device_run_id="$2"
+  device_info_json=$(get_device_info_json "$test_run_id" "$device_run_id")
+  device_status=$(echo "$device_info_json" |jq -r '.currentState.status')
+  if [ "$device_status" == "EXCLUDED" ]; then
+    echo "1"
+  else
+    echo "0"
+  fi
 }
 
 ########################################
@@ -344,8 +379,10 @@ function get_result_files {
   rm -rf "${TEST_RESULTS_DIR:?}"
   mkdir -p $TEST_RESULTS_DIR
   for device_run_id in $device_run_ids; do
-    get_device_result_files "$test_run_id" "$device_run_id"
-    get_device_screenshots "$test_run_id" "$device_run_id"
+    if [ "$(was_device_excluded "$test_run_id" "$device_run_id")" == "0" ]; then
+      get_device_result_files "$test_run_id" "$device_run_id"
+      get_device_screenshots "$test_run_id" "$device_run_id"
+    fi
   done
 
   if [ -z "$(ls -A ${TEST_RESULTS_DIR}/*.xml)" ]; then
