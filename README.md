@@ -17,6 +17,7 @@
 	 -i	Set timeout value for project in seconds. Will use 600s (10min) unless specified
 	 -f	Set fail threshold in percentage [0-100], the percentage of test steps that have to pass for the test run to succeed (impacts exit value)
 	 -x	Set device completion threshold in percentage [0-100], the percentage of devices in device group that need to complete for the test run to complete (impacts exit value)
+	 -n	Specify a test_run_id, client will only fetch those results and exit
 	 -v	Verbose
 ## Example:
 	./testdroid_cmdline.sh -u you@yourdomain.com -p hunter2 -t "Example test Project" -r "Nightly run, Monday" -a path/to/build.apk -z ../path_to_my_test_folder -c SINGLE
