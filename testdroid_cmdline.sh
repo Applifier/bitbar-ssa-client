@@ -380,8 +380,9 @@ function get_result_files {
   mkdir -p $TEST_RESULTS_DIR
   for device_run_id in $device_run_ids; do
     if [ "$(was_device_excluded "$test_run_id" "$device_run_id")" == "0" ]; then
-      get_device_result_files "$test_run_id" "$device_run_id"
-      get_device_screenshots "$test_run_id" "$device_run_id"
+      device_human_name="$(get_device_human_name "$test_run_id" "$device_run_id")"
+      get_device_result_files "$test_run_id" "$device_run_id" "$device_human_name"
+      get_device_screenshots "$test_run_id" "$device_run_id" "$device_human_name"
     fi
   done
 
@@ -397,16 +398,17 @@ function get_result_files {
 # Arguments:
 #   test_run_id
 #   device_run_id
+#   device_human_name
 # Returns:
 #   Void (writes files to subfolder TEST_RESULTS_DIR)
 #########################################
 function get_device_result_files {
   test_run_id="$1"
   device_run_id="$2"
+  device_human_name="$3"
   test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
   device_info_url="$test_run_item_url/device-runs/$device_run_id"
   device_session_id=$(auth_curl "$device_info_url" | jq ".deviceSessionId")
-  device_human_name="$(get_device_human_name "$test_run_id" "$device_run_id")"
   device_session_files_url="$test_run_item_url/device-sessions/$device_session_id/output-file-set/files"
   response=$(auth_curl "$device_session_files_url")
   device_file_ids=$(echo "$response" | jq '.data[] |"\(.id);\(.name)"')
@@ -472,7 +474,7 @@ function get_device_result_file {
 function get_device_screenshots {
   test_run_id="$1"
   device_run_id="$2"
-  device_human_name="$(get_device_human_name "$test_run_id" "$device_run_id")"
+  device_human_name="$3"
   test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
   device_session_screenshots_url="$test_run_item_url/device-runs/$device_session_id/screenshots"
   response=$(auth_curl "$device_session_screenshots_url")
