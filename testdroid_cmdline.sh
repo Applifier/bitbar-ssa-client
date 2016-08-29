@@ -467,20 +467,20 @@ else
   orgdir=$(pwd)
   FULL_APP_PATH=$(get_full_path "${APP_PATH}")
   cd "$orgdir" || exit 33
-  if [ ! -f "${FULL_APP_PATH}" ]; then
-    echo "App file '${APP_PATH}' does not exist!"
-    exit 2
-  fi
   extension=${FULL_APP_PATH##*.}
   case "${extension}" in
     "apk" )
       PLATFORM="android" ;;
-    "ipa" | "app" )
+    "ipa" )
       PLATFORM="ios" ;;
     * )
       prettyp "Cannot handle unexpected platform with extension ${extension}"
       exit 12 ;;
   esac
+  if [ ! -f "${FULL_APP_PATH}" ]; then
+    echo "App file '${APP_PATH}' does not exist!"
+    exit 2
+  fi
 fi
 
 # Check that test folder exists and is a folder
