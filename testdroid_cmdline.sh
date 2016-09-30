@@ -47,6 +47,9 @@ PROJECT_TIMEOUT=600
 FAIL_PASSED_THRESHOLD=0
 DEVICES_RUN_THRESHOLD=0
 CONNECTION_FAILURES_LIMIT=20
+PROJECT_LOCK_TIMEOUT=120
+LOCK_GRACE_PERIOD=5
+INSTANCE="$(echo $HOSTNAME || tr -cd '[[:alnum:]]._-')-$RANDOM"
 
 # Helper Functions
 function usage(){
@@ -421,6 +424,89 @@ function get_device_result_file {
 }
 
 
+#########################################
+# Generate a json-string which functions as
+# lock for testdroid project configuration
+# Arguments: None
+# Retuns:
+#   JSON string which this device can use to
+#   identify itself
+#########################################
+function generate_project_configuration_lock {
+  lock_str="{\"lock_time\": $(date +%s), \"instance\": \"$INSTANCE\"}"
+  echo "$lock_str"
+}
+
+
+#########################################
+# Wait until project-configuration is available
+# for this instance and ensure that we have locked
+# the project configuration for our instance
+# Arguments: None
+# Returns:
+#   0 if successful
+#   non-zero if failure
+#########################################
+function get_project_configuration_lock {
+  prettyp "trying to get lock for '$INSTANCE'"
+  project_config_url=$(url_from_template "${TD_CONFIGURE_PROJECT_URL_TEMPLATE}")
+  mylock="$(generate_project_configuration_lock)"
+  done=false
+  while [ "$done" != "true" ]; do
+    response=$(auth_curl "${project_config_url}")
+    current_value=$(echo "$response" | jq -r '.withAnnotation')
+    # set lock if there is no lock in place
+    if [ -z "$current_value" ]; then
+      response=$(auth_curl -POST -F withAnnotation="$mylock" "${project_config_url}")
+    else
+      project_instance=$(echo $response |jq -r '.withAnnotation' |jq -r '.instance')
+      # If the lock is our lock then remove it. We should not be in this situation
+      if [ $project_instance == "$INSTANCE" ]; then
+        auth_curl -POST -F withAnnotation="" "${project_config_url}"
+      else
+        # Someone elses lock
+        project_lock_time=$(echo $response |jq -r '.withAnnotation' |jq -r '.lock_time')
+        current_time=$(date +%s)
+        # Remove lock if it is old enough to have timeouted
+        if [ "$((project_lock_time+PROJECT_LOCK_TIMEOUT))" -lt "$current_time" ]; then
+          prettyp "Lock timeout for '$current_value'. Removing old lock"
+          auth_curl -POST -F withAnnotation="" "${project_config_url}"
+        else
+          prettyp "Current lock is for '$project_instance', it will timeout in $((project_lock_time+PROJECT_LOCK_TIMEOUT-current_time))s"
+        fi
+      fi
+    fi
+    response=$(auth_curl "${project_config_url}")
+    current_value=$(echo "$response" | jq -r '.withAnnotation')
+    # Use a grace_period to avoid a race condition if two clients lock at once
+    if [ "$current_value" == "$mylock" ]; then
+      sleep $LOCK_GRACE_PERIOD
+      response=$(auth_curl "${project_config_url}")
+      current_value=$(echo "$response" | jq -r '.withAnnotation')
+      if [ "$current_value" == "$mylock" ]; then
+        prettyp "We got project_config lock for '$INSTANCE'"
+        done=true
+      fi
+    else
+      prettyp "We don't have the lock, waiting"
+      sleep $LOCK_GRACE_PERIOD
+    fi
+  done
+}
+
+function release_project_configuration_lock {
+  project_config_url=$(url_from_template "${TD_CONFIGURE_PROJECT_URL_TEMPLATE}")
+  response=$(auth_curl "${project_config_url}")
+  current_value=$(echo "$response" | jq -r '.withAnnotation')
+  project_instance=$(echo $response |jq -r '.withAnnotation' |jq -r '.instance')
+  if [ "$project_instance" == "$INSTANCE" ]; then
+    echo "Released project lock for instance '$INSTANCE'"
+    response=$(auth_curl -POST -F withAnnotation="" "${project_config_url}")
+  else
+    echo "Lock on server is for '$project_instance', this is '$INSTANCE', not releasing"
+  fi
+}
+
 # Commandline arguments
 while getopts hvslu:p:t:r:a:d:c:i:f:x:z: OPTIONS; do
   case $OPTIONS in
@@ -459,7 +545,7 @@ if [ -z "${APP_PATH}" ]; then echo "Please specify app path!" ; usage ; exit 1 ;
 if [ -z "${TEST_ARCHIVE_FOLDER}" ]; then echo "Please specify the folder containing the tests!" ; usage ; exit 1 ; fi
 
 # Check that test_application is given as parameter
-if [ -z APP_PATH ]; then
+if [ -z "$APP_PATH" ]; then
   echo "Please specify the test_application as an argument"
   echo -e "$(usage)"
   exit 1
@@ -529,6 +615,9 @@ FULL_TEST_PATH=$(get_full_path $TEST_ZIP_FILE)
 # Get PROJECT_ID
 get_project_id "$PROJECT_NAME"
 
+# Lock project configuration
+get_project_configuration_lock
+
 # Upload app to testdroid cloud
 upload_app_to_cloud "$FULL_APP_PATH"
 
@@ -539,12 +628,15 @@ upload_test_archive_to_cloud "$FULL_TEST_PATH"
 setup_project_settings "$DEVICE_GROUP_ID"
 
 if [ "$SIMULATE" -eq "1" ]; then
-  prettyp "Simulated run, not actually starting test" ; exit 0
+  prettyp "Simulated run, not actually starting test"
+  release_project_configuration_lock
+  exit 0
 fi
 
 # Start test run
 test_run_id=$(start_test_run "$TEST_RUN_NAME")
 echo "test_run_id='$test_run_id'"
+release_project_configuration_lock
 
 # Get the test run device runs
 device_runs_url=$(url_from_template "${TD_TEST_DEVICE_RUN_URL_TEMPLATE}" "${test_run_id}")
