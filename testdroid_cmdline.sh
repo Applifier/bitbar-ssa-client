@@ -457,6 +457,8 @@ function get_project_configuration_lock {
     current_value=$(echo "$response" | jq -r '.withAnnotation')
     # set lock if there is no lock in place
     if [ -z "$current_value" ]; then
+      # Refresh the lock to avoid premature timeout
+      mylock="$(generate_project_configuration_lock)"
       response=$(auth_curl -POST -F withAnnotation="$mylock" "${project_config_url}")
     else
       project_instance=$(echo $response |jq -r '.withAnnotation' |jq -r '.instance')
