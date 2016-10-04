@@ -44,15 +44,12 @@ SIMULATE=0
 SCHEDULER="PARALLEL"
 TEST_RESULTS_DIR="results"
 PROJECT_TIMEOUT=600
-FAIL_PASSED_THRESHOLD=0
-DEVICES_RUN_THRESHOLD=0
 CONNECTION_FAILURES_LIMIT=20
 
 # Helper Functions
 function usage(){
   echo -e "usage:\n   $0 OPTIONS"
-  echo -e "OPTIONS:"
-  echo -e "\t -h\tShow this message"
+  echo -e "Test run OPTIONS:"
   echo -e "\t -z\tThe tests-folder which will be archived and sent to testdroid (required)"
   echo -e "\t -u\tUsername (required, can also use API-key here)"
   echo -e "\t -p\tPassword (required unless using API-key)"
@@ -64,9 +61,10 @@ function usage(){
   echo -e "\t -s\tSimulate (Upload tests and app and configure project. Don't actually run test)"
   echo -e "\t -c\tSet scheduler for test, options are [PARALLEL, SERIAL, SINGLE] (default: PARALLEL)"
   echo -e "\t -i\tSet timeout value for project in seconds. Will use 600s (10min) unless specified"
-  echo -e "\t -f\tSet fail threshold in percentage [0-100], the percentage of test steps that have to pass for the test run to succeed (impacts exit value)"
-  echo -e "\t -x\tSet device completion threshold in percentage [0-100], the percentage of devices in device group that need to complete for the test run to complete (impacts exit value)"
-  echo -e "\t -n\tSpecify a test_run_id, client will only fetch those results and exit"
+  echo -e "After test run OPTIONS:"
+  echo -e "\t -n\tSpecify a testRunId, client will only fetch those results and exit (numeric id, check test results URL)"
+  echo -e "Misc OPTIONS"
+  echo -e "\t -h\tShow this message"
   echo -e "\t -v\tVerbose"
   echo -e "Example:"
   echo -e "\t$0 -u you@yourdomain.com -p hunter2 -t \"Example test Project\" -r \"Nightly run, Monday\" -a path/to/build.apk"
@@ -510,7 +508,7 @@ function get_device_screenshot_file {
 
 
 # Commandline arguments
-while getopts hvslu:p:t:r:a:d:c:i:f:x:z:n: OPTIONS; do
+while getopts hvslu:p:t:r:a:d:c:i:z:n: OPTIONS; do
   case $OPTIONS in
     z ) TEST_ARCHIVE_FOLDER=$OPTARG ;;
     u ) TD_USER=$OPTARG ;;
@@ -523,8 +521,6 @@ while getopts hvslu:p:t:r:a:d:c:i:f:x:z:n: OPTIONS; do
     c ) SCHEDULER=$OPTARG ;;
     i ) PROJECT_TIMEOUT=$OPTARG ;;
     s ) SIMULATE=1 ;;
-    f ) FAIL_PASSED_THRESHOLD=$OPTARG ;;
-    x ) DEVICES_RUN_THRESHOLD=$OPTARG ;;
     h ) usage; exit ;;
     v ) verbose ;;
     n ) RESULTS_RUN_ID=$OPTARG ;;
