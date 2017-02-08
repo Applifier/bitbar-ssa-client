@@ -10,7 +10,7 @@ echo "Extracting tests.zip..."
 unzip tests.zip
 
 echo "Starting Appium ..."
-/opt/appium/appium/bin/appium.js --log-no-colors --log-timestamp >appium.log 2>&1 &
+appium-1.4 --log-no-colors --log-timestamp >appium.log 2>&1 &
 
 echo -n "Waiting for Appium server to be ready "
 start_string="Appium REST http interface listener started"
