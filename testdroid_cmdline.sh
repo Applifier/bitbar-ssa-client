@@ -23,6 +23,7 @@ CLEANUP_FILES=(
   'console.log'
   'syslog.log'
 )
+
 TD_CLOUD_BASE_URL="https://cloud.testdroid.com"
 TD_TOKEN_URL="${TD_CLOUD_BASE_URL}/oauth/token"
 TD_PROJECTS_URL="${TD_CLOUD_BASE_URL}/api/v2/me/projects"
@@ -44,6 +45,7 @@ SIMULATE=0
 SCHEDULER="PARALLEL"
 TEST_RESULTS_DIR="results"
 PROJECT_TIMEOUT=600
+TESTDROID_SSA_CLIENT_TIMEOUT=0
 CONNECTION_FAILURES_LIMIT=20
 PROJECT_LOCK_TIMEOUT=120
 LOCK_GRACE_PERIOD=5
@@ -393,6 +395,45 @@ function get_result_files {
   fi
 }
 
+########################################
+# Checks if there are devices with RUNNING state in the test run
+# Arguments:
+#   test_run_id
+# Returns:
+#   bool (0 for false, 1 for true)
+########################################
+function are_devices_running {
+  test_run_id=$1
+  device_runs_url=$(url_from_template "${TD_TEST_DEVICE_RUN_URL_TEMPLATE}" "${test_run_id}")
+  response=$(auth_curl "${device_runs_url}")
+  device_run_ids=$(echo "$response" | jq '.data[].id')
+  devices_are_running="0"
+
+  for device_run_id in $device_run_ids; do
+    device_info_json=$(get_device_info_json "$test_run_id" "$device_run_id")
+    device_status=$(echo "$device_info_json" |jq -r '.currentState.status')
+    device_human_name="$(get_device_human_name "$test_run_id" "$device_run_id")"
+    if [ "$device_status" == "RUNNING" ]; then
+      devices_are_running="1"
+      break
+    fi
+  done
+
+  echo "$devices_are_running"
+}
+
+########################################
+# Abort current test run
+# Arguments:
+#   None
+# Returns:
+#   Void (aborts run, prints respon)
+#########################################
+function abort_run {
+  test_run_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
+  auth_curl -X POST "${test_run_url}/abort"
+}
+
 
 ########################################
 # Get all test results and files for the device
@@ -597,7 +638,7 @@ function get_device_screenshot_file {
 
 
 # Commandline arguments
-while getopts hvslu:p:t:r:a:d:c:i:z:n: OPTIONS; do
+while getopts hvslu:p:t:r:a:d:c:i:z:n:x: OPTIONS; do
   case $OPTIONS in
     z ) TEST_ARCHIVE_FOLDER=$OPTARG ;;
     u ) TD_USER=$OPTARG ;;
@@ -613,6 +654,7 @@ while getopts hvslu:p:t:r:a:d:c:i:z:n: OPTIONS; do
     h ) usage; exit ;;
     v ) verbose ;;
     n ) RESULTS_RUN_ID=$OPTARG ;;
+    x ) TESTDROID_SSA_CLIENT_TIMEOUT=$OPTARG ;;
     \? ) echo "Unknown option -$OPTARG" >&2 ; exit 1;;
     : ) echo "Missing required argument for -$OPTARG" >&2 ; exit 1;;
   esac
@@ -633,6 +675,9 @@ if [ -n "${RESULTS_RUN_ID}" ]; then
   get_result_files "$RESULTS_RUN_ID"
   exit
 fi
+
+if [[ ! $TESTDROID_SSA_CLIENT_TIMEOUT =~ ^[0-9]+$ ]]; then
+    echo 'Testdroid client timeout must be an integer!' ; exit 1 ; fi
 
 if [ -z "${APP_PATH}" ]; then echo "Please specify app path!" ; usage ; exit 1 ; fi
 if [ -z "${TEST_ARCHIVE_FOLDER}" ]; then echo "Please specify the folder containing the tests!" ; usage ; exit 1 ; fi
@@ -688,6 +733,9 @@ for i in "${CLEANUP_FILES[@]}"; do
 done
 
 cd $zip_temp_dir || exit 34
+
+# prevent sending old results to TD
+rm -rf results
 
 if [ ! -f "$generic_start_script" ]; then
   case "${PLATFORM}" in
@@ -745,6 +793,7 @@ test_run_browser_url=$(url_from_template "${TD_TEST_RUN_ITEM_BROWSER_URL_TEMPLAT
 prettyp "Results are to be found at ${test_run_browser_url}"
 test_status=""
 connection_failures=0
+start_time=$(date +%s)
 while [ 1 -ne 2 ]; do
   sleep 5
 
@@ -753,6 +802,15 @@ while [ 1 -ne 2 ]; do
   if [ "${test_status}" != "${test_status_new}" ]; then
     test_status=$test_status_new
     echo ; prettyp "Test status changed: $test_status"
+  fi
+
+  if [ "${TESTDROID_SSA_CLIENT_TIMEOUT}" -ne "0" ] &&
+     [ "$(( start_time + TESTDROID_SSA_CLIENT_TIMEOUT ))" -lt "$(date +%s)" ] &&
+     [ "$( are_devices_running "$test_run_id" )" == "0" ];
+  then
+    echo "Run execution timeouted (timeout=$TESTDROID_SSA_CLIENT_TIMEOUT}s)"
+    abort_run
+    test_status="FINISHED"
   fi
 
   case "$(echo "$test_status" |xargs)" in
