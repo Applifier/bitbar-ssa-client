@@ -6,37 +6,17 @@ export TESTDROID=1
 TEST=${TEST:="your_test.js"} #Name of the test file
 
 ##### Cloud testrun dependencies start
-echo "Extracting tests.zip..."
+echo "[Testdroid-ssa-client] Extracting tests.zip..."
 unzip tests.zip
 
-echo "Starting Appium ..."
-/opt/appium/appium/bin/appium.js --log-no-colors --log-timestamp >appium.log 2>&1 &
-
-echo -n "Waiting for Appium server to be ready "
-start_string="Appium REST http interface listener started"
-retry=30
-while [ $retry -gt 0 ]
-do
-  sleep 1
-  echo -n "."
-  if [ -n "$(grep -s "$start_string" appium.log)" ]; then
-    retry=0
-    echo " done"
-    echo $(grep "$start_string" appium.log)
-  else
-    ((retry--))
-    if [ $retry -eq 0 ]; then
-      echo " waited 30 seconds but server was not ready"
-    fi
-  fi
-done
+echo "[Testdroid-ssa-client] NOT Starting Appium, start it in your test script if needed!"
 
 ##### Cloud testrun dependencies end.
 
 export APPIUM_APPFILE=$PWD/application.apk #App file is at current working folder
 
 ## Run the test:
-echo "Running test ${TEST}"
+echo "[Testdroid-ssa-client] Running test ${TEST}"
 rm -rf screenshots
 mkdir screenshots
 
