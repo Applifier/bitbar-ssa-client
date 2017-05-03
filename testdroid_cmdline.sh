@@ -22,6 +22,7 @@ CLEANUP_FILES=(
   'logcat.log'
   'console.log'
   'syslog.log'
+  'results'
 )
 
 TD_CLOUD_BASE_URL="https://cloud.testdroid.com"
@@ -426,7 +427,7 @@ function are_devices_running {
 # Arguments:
 #   None
 # Returns:
-#   Void (aborts run, prints respon)
+#   Void (aborts run, prints response)
 #########################################
 function abort_run {
   test_run_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
@@ -733,9 +734,6 @@ for i in "${CLEANUP_FILES[@]}"; do
 done
 
 cd $zip_temp_dir || exit 34
-
-# prevent sending old results to TD
-rm -rf results
 
 if [ ! -f "$generic_start_script" ]; then
   case "${PLATFORM}" in
