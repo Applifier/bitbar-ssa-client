@@ -792,6 +792,7 @@ prettyp "Results are to be found at ${test_run_browser_url}"
 test_status=""
 connection_failures=0
 start_time=$(date +%s)
+timeout_time="$(( start_time + TESTDROID_SSA_CLIENT_TIMEOUT ))"
 while [ 1 -ne 2 ]; do
   sleep 5
 
@@ -802,7 +803,6 @@ while [ 1 -ne 2 ]; do
     echo ; prettyp "Test status changed: $test_status"
   fi
 
-  timeout_time="$(( start_time + TESTDROID_SSA_CLIENT_TIMEOUT ))"
   if [ "$TESTDROID_SSA_CLIENT_TIMEOUT" == "0" ]; then
     : #pass
   elif [ "$timeout_time" -gt "$(date +%s)" ]; then
