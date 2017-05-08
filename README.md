@@ -13,8 +13,12 @@
         -l	List Testdroid deviceGroups
         -s	Simulate (Upload tests and app and configure project. Don't actually run test)
         -c	Set scheduler for test, options are [PARALLEL, SERIAL, SINGLE] (default: PARALLEL)
-        -i	Set timeout value for project in seconds. Will use 600s (10min) unless specified. NOTE: this timeout applies to a **single test run on a device**
-        -x  Set timeout value for testdroid-ssa-client in seconds (no default timeout). NOTE: this timeout applies to the **entire run of testdroid-ssa-client**, devices that tests didn't start on within this timeout will be **skipped**
+        -i	Set timeout value for project in seconds. Will use 600s (10min) unless specified.
+            NOTE: this timeout applies to a **single test run on a device**
+        -x	Set timeout value for testdroid-ssa-client in seconds (no default timeout).
+            NOTE: this timeout applies to the **entire run of testdroid-ssa-client**,
+            devices that tests didn't start on within this timeout will be **skipped**
+
 ## After test run OPTIONS:
         -n	Specify a testRunId, client will only fetch those results and exit (numeric id, check test results URL)
 ## Misc OPTIONS
