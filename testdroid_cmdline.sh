@@ -324,7 +324,7 @@ function get_device_human_name {
   test_run_id="$1"
   device_session_id="$2"
   device_info_json=$(get_device_info_json $test_run_id $device_session_id)
-  human_name=$(echo "$device_info_json" |jq -r '.deviceName + "-API\(.softwareVersion.apiLevel)"' |sed -e s/[^a-zA-Z0-9_-]/_/g)
+  human_name=$(echo "$device_info_json" |jq -r '.device.displayName + "-API\(.device.softwareVersion.apiLevel)"' |sed -e s/[^a-zA-Z0-9_-]/_/g)
   safe_human_name=$(sed -e s/[^a-zA-Z0-9_-]/_/g <<< "$human_name")
   safe_human_name=${safe_human_name:=$device_session_id}
   echo "$safe_human_name-$device_session_id"
