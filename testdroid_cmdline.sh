@@ -271,6 +271,7 @@ function setup_project_settings {
   used_device_group_id=$(echo "$response" | jq '.usedDeviceGroupId')
   used_scheduler=$(echo "$response" | jq -r '.scheduler')
   used_project_timeout=$(echo "$response" | jq -r '.timeout')
+
   if [ -n "$DEVICE_GROUP_ID" ]; then
     if [ "$used_device_group_id" == "$device_group_id" ]; then
       prettyp "Using device group $used_device_group_id"
@@ -279,17 +280,23 @@ function setup_project_settings {
       exit 11
     fi
   fi
-  if [ "$used_scheduler" == "$SCHEDULER" ]; then
-    prettyp "Using scheduler '$used_scheduler'"
-  else
-    prettyp "Unable to set scheduler '${SCHEDULER}' for project! Exiting. Response was '$response'"
-    exit 11
+
+  if [ -n $SCHEDULER ]; then
+    if [ "$used_scheduler" == "$SCHEDULER" ]; then
+      prettyp "Using scheduler '$used_scheduler'"
+    else
+      prettyp "Unable to set scheduler '${SCHEDULER}' for project! Exiting. Response was '$response'"
+      exit 11
+    fi
   fi
-  if [ "$used_project_timeout" == "$PROJECT_TIMEOUT" ]; then
-    prettyp "Using timeout '$used_project_timeout'"
-  else
-    prettyp "Unable to set timeout '${PROJECT_TIMEOUT}' for project! Exiting. Response was '$response'"
-    exit 11
+
+  if [ -n $PROJECT_TIMEOUT ]; then
+    if [ "$used_project_timeout" == "$PROJECT_TIMEOUT" ]; then
+      prettyp "Using timeout '$used_project_timeout'"
+    else
+      prettyp "Unable to set timeout '${PROJECT_TIMEOUT}' for project! Exiting. Response was '$response'"
+      exit 11
+    fi
   fi
 }
 
