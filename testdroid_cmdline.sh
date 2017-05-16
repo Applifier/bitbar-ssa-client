@@ -412,6 +412,7 @@ function are_devices_running {
   for device_run_id in $device_run_ids; do
     device_info_json=$(get_device_info_json "$test_run_id" "$device_run_id")
     device_status=$(echo "$device_info_json" |jq -r '.currentState.status')
+    device_human_name="$(get_device_human_name "$test_run_id" "$device_run_id")"
     if [ "$device_status" == "RUNNING" ]; then
       devices_are_running="1"
       break
@@ -800,6 +801,7 @@ while [ 1 -ne 2 ]; do
   fi
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
   timeout_time="$(( start_time + TESTDROID_SSA_CLIENT_TIMEOUT ))"
   if [ "${TESTDROID_SSA_CLIENT_TIMEOUT}" == "0" ]; then
@@ -809,6 +811,12 @@ while [ 1 -ne 2 ]; do
   elif [ "$( are_devices_running "$test_run_id" )" -ne "0" ]; then
     : #pass
   else
+=======
+  if [ "${TESTDROID_SSA_CLIENT_TIMEOUT}" -ne "0" ] &&
+     [ "$(( start_time + TESTDROID_SSA_CLIENT_TIMEOUT ))" -lt "$(date +%s)" ] &&
+     [ "$( are_devices_running "$test_run_id" )" == "0" ];
+  then
+>>>>>>> parent of 83f137a... Improved if block readability
     echo "Run execution timeouted (timeout=$TESTDROID_SSA_CLIENT_TIMEOUT}s)"
     abort_run
     test_status="FINISHED"
