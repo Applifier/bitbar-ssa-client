@@ -394,6 +394,7 @@ function get_result_files {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 ########################################
 # Checks if there are devices with RUNNING state in the test run
@@ -435,6 +436,8 @@ function abort_run {
 }
 
 >>>>>>> parent of e7e6e7a... added results folder to cleanup list, fixed typo
+=======
+>>>>>>> parent of fca0bc5... Added timeout for testdroid-ssa-client
 
 ########################################
 # Get all test results and files for the device
@@ -731,9 +734,6 @@ done
 
 cd $zip_temp_dir || exit 34
 
-# prevent sending old results to TD
-rm -rf results
-
 if [ ! -f "$generic_start_script" ]; then
   case "${PLATFORM}" in
     "android")
@@ -802,6 +802,7 @@ while [ 1 -ne 2 ]; do
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
   timeout_time="$(( start_time + TESTDROID_SSA_CLIENT_TIMEOUT ))"
   if [ "${TESTDROID_SSA_CLIENT_TIMEOUT}" == "0" ]; then
@@ -823,6 +824,8 @@ while [ 1 -ne 2 ]; do
   fi
 
 >>>>>>> parent of f112c0d... getting testrun status when aborting. minor cleanups
+=======
+>>>>>>> parent of fca0bc5... Added timeout for testdroid-ssa-client
   case "$(echo "$test_status" |xargs)" in
     "FINISHED" )
 
