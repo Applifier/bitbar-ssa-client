@@ -11,10 +11,14 @@ unzip tests.zip
 
 echo "Starting Appium ..."
 <<<<<<< HEAD
+<<<<<<< HEAD
 /opt/appium/appium/bin/appium.js --log-no-colors --log-timestamp >appium.log 2>&1 &
 =======
 appium-1.5 --log-no-colors --log-timestamp >appium.log 2>&1 &
 >>>>>>> parent of cb3ae22... Merge pull request #24 from Applifier/feature/removed_appium_start
+=======
+appium-1.5 --log-no-colors --log-timestamp >appium.log 2>&1 &
+>>>>>>> parent of 4a126b5... Removed autostart of appium for both Android and iOS. If your scripts require appium then please start it yourselfe. There's now several versions of appium and not all tests use appium at all. It does not make much sense to auto start it each time.
 
 echo -n "Waiting for Appium server to be ready "
 start_string="Appium REST http interface listener started"
