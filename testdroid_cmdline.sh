@@ -22,9 +22,7 @@ CLEANUP_FILES=(
   'logcat.log'
   'console.log'
   'syslog.log'
-  'results'
 )
-
 TD_CLOUD_BASE_URL="https://cloud.testdroid.com"
 TD_TOKEN_URL="${TD_CLOUD_BASE_URL}/oauth/token"
 TD_PROJECTS_URL="${TD_CLOUD_BASE_URL}/api/v2/me/projects"
@@ -35,7 +33,7 @@ TD_UPLOAD_TEST_URL_TEMPLATE="${TD_CLOUD_BASE_URL}/api/v2/me/projects/<projectId>
 TD_CONFIGURE_PROJECT_URL_TEMPLATE="${TD_CLOUD_BASE_URL}/api/v2/me/projects/<projectId>/config"
 TD_TEST_RUNS_URL_TEMPLATE="${TD_CLOUD_BASE_URL}/api/v2/me/projects/<projectId>/runs"
 TD_TEST_RUN_ITEM_URL_TEMPLATE="${TD_TEST_RUNS_URL_TEMPLATE}/<runId>"
-TD_TEST_DEVICE_SESSION_URL_TEMPLATE="${TD_TEST_RUN_ITEM_URL_TEMPLATE}/device-sessions"
+TD_TEST_DEVICE_RUN_URL_TEMPLATE="${TD_TEST_RUN_ITEM_URL_TEMPLATE}/device-runs"
 TD_TEST_RUN_ITEM_BROWSER_URL_TEMPLATE="https://cloud.testdroid.com/#service/testrun/<projectId>/<runId>"
 TD_DEFAULT_HEADER="Accept: application/json"
 TEST_ZIP_FILE='test.zip'
@@ -46,7 +44,6 @@ SIMULATE=0
 SCHEDULER="PARALLEL"
 TEST_RESULTS_DIR="results"
 PROJECT_TIMEOUT=600
-TESTDROID_SSA_CLIENT_TIMEOUT=0
 CONNECTION_FAILURES_LIMIT=20
 PROJECT_LOCK_TIMEOUT=120
 LOCK_GRACE_PERIOD=5
@@ -316,33 +313,33 @@ function start_test_run {
 # Get human readable name for device
 # Arguments:
 #   test_run_id
-#   device_session_id
+#   device_run_id
 # Returns:
-#   String (human readable device id (or device_session_id if failure))
+#   String (human readable device id (or device_run_id if failure))
 #########################################
 function get_device_human_name {
   test_run_id="$1"
-  device_session_id="$2"
-  device_info_json=$(get_device_info_json $test_run_id $device_session_id)
-  human_name=$(echo "$device_info_json" |jq -r '.device.displayName + "-API\(.device.softwareVersion.apiLevel)"' |sed -e s/[^a-zA-Z0-9_-]/_/g)
+  device_run_id="$2"
+  device_info_json=$(get_device_info_json $test_run_id $device_run_id)
+  human_name=$(echo "$device_info_json" |jq -r '.deviceName + "-API\(.softwareVersion.apiLevel)"' |sed -e s/[^a-zA-Z0-9_-]/_/g)
   safe_human_name=$(sed -e s/[^a-zA-Z0-9_-]/_/g <<< "$human_name")
-  safe_human_name=${safe_human_name:=$device_session_id}
-  echo "$safe_human_name-$device_session_id"
+  safe_human_name=${safe_human_name:=$device_run_id}
+  echo "$safe_human_name-$device_run_id"
 }
 
 ########################################
 # Get device_info_json
 # Arguments:
 #   test_run_id
-#   device_session_id
+#   device_run_id
 # Returns:
 #   String (json response for device_info)
 #########################################
 function get_device_info_json {
   test_run_id="$1"
-  device_session_id="$2"
+  device_run_id="$2"
   test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
-  device_info_url="$test_run_item_url/device-sessions/$device_session_id"
+  device_info_url="$test_run_item_url/device-runs/$device_run_id"
   device_info_json=$(auth_curl "$device_info_url" --fail)
   echo "$device_info_json"
 }
@@ -351,15 +348,15 @@ function get_device_info_json {
 # Check if device was excluded from testrun
 # Arguments:
 #   test_run_id
-#   device_session_id
+#   device_run_id
 # Returns:
 #   bool (0 for false, 1 for true)
 #########################################
 function was_device_excluded {
   test_run_id="$1"
-  device_session_id="$2"
-  device_info_json=$(get_device_info_json "$test_run_id" "$device_session_id")
-  device_status=$(echo "$device_info_json" |jq -r '.state')
+  device_run_id="$2"
+  device_info_json=$(get_device_info_json "$test_run_id" "$device_run_id")
+  device_status=$(echo "$device_info_json" |jq -r '.currentState.status')
   if [ "$device_status" == "EXCLUDED" ]; then
     echo "1"
   else
@@ -377,16 +374,16 @@ function was_device_excluded {
 function get_result_files {
   echo "let's do this"
   test_run_id=$1
-  device_runs_url=$(url_from_template "${TD_TEST_DEVICE_SESSION_URL_TEMPLATE}" "${test_run_id}")
+  device_runs_url=$(url_from_template "${TD_TEST_DEVICE_RUN_URL_TEMPLATE}" "${test_run_id}")
   response=$(auth_curl "${device_runs_url}")
-  device_session_ids=$(echo "$response" | jq '.data[].id')
+  device_run_ids=$(echo "$response" | jq '.data[].id')
   rm -rf "${TEST_RESULTS_DIR:?}"
   mkdir -p $TEST_RESULTS_DIR
-  for device_session_id in $device_session_ids; do
-    if [ "$(was_device_excluded "$test_run_id" "$device_session_id")" == "0" ]; then
-      device_human_name="$(get_device_human_name "$test_run_id" "$device_session_id")"
-      get_device_result_files "$test_run_id" "$device_session_id" "$device_human_name"
-      get_device_screenshots "$test_run_id" "$device_session_id" "$device_human_name"
+  for device_run_id in $device_run_ids; do
+    if [ "$(was_device_excluded "$test_run_id" "$device_run_id")" == "0" ]; then
+      device_human_name="$(get_device_human_name "$test_run_id" "$device_run_id")"
+      get_device_result_files "$test_run_id" "$device_run_id" "$device_human_name"
+      get_device_screenshots "$test_run_id" "$device_run_id" "$device_human_name"
     fi
   done
 
@@ -396,6 +393,8 @@ function get_result_files {
   fi
 }
 
+<<<<<<< HEAD
+=======
 ########################################
 # Checks if there are devices with RUNNING state in the test run
 # Arguments:
@@ -405,14 +404,14 @@ function get_result_files {
 ########################################
 function are_devices_running {
   test_run_id=$1
-  device_runs_url=$(url_from_template "${TD_TEST_DEVICE_SESSION_URL_TEMPLATE}" "${test_run_id}")
+  device_runs_url=$(url_from_template "${TD_TEST_DEVICE_RUN_URL_TEMPLATE}" "${test_run_id}")
   response=$(auth_curl "${device_runs_url}")
-  device_session_ids=$(echo "$response" | jq '.data[].id')
+  device_run_ids=$(echo "$response" | jq '.data[].id')
   devices_are_running="0"
 
-  for device_session_id in $device_session_ids; do
-    device_info_json=$(get_device_info_json "$test_run_id" "$device_session_id")
-    device_status=$(echo "$device_info_json" |jq -r '.state')
+  for device_run_id in $device_run_ids; do
+    device_info_json=$(get_device_info_json "$test_run_id" "$device_run_id")
+    device_status=$(echo "$device_info_json" |jq -r '.currentState.status')
     if [ "$device_status" == "RUNNING" ]; then
       devices_are_running="1"
       break
@@ -427,7 +426,7 @@ function are_devices_running {
 # Arguments:
 #   None
 # Returns:
-#   Void (aborts run, prints response)
+#   Void (aborts run, prints respon)
 #########################################
 function abort_run {
   test_run_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
@@ -435,27 +434,29 @@ function abort_run {
   echo "$status"
 }
 
+>>>>>>> parent of e7e6e7a... added results folder to cleanup list, fixed typo
 
 ########################################
 # Get all test results and files for the device
 # Arguments:
 #   test_run_id
-#   device_session_id
+#   device_run_id
 #   device_human_name
 # Returns:
 #   Void (writes files to subfolder TEST_RESULTS_DIR)
 #########################################
 function get_device_result_files {
   test_run_id="$1"
-  device_session_id="$2"
+  device_run_id="$2"
   device_human_name="$3"
   test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
-  device_info_url="$test_run_item_url/device-sessions/$device_session_id"
+  device_info_url="$test_run_item_url/device-runs/$device_run_id"
+  device_session_id=$(auth_curl "$device_info_url" | jq ".deviceSessionId")
   device_session_files_url="$test_run_item_url/device-sessions/$device_session_id/output-file-set/files"
   response=$(auth_curl "$device_session_files_url")
   device_file_ids=$(echo "$response" | jq '.data[] |"\(.id);\(.name)"')
   for file_specs in $device_file_ids; do
-    get_device_result_file "$test_run_id" "$device_session_id" "$device_human_name" "$file_specs"
+    get_device_result_file "$test_run_id" "$device_run_id" "$device_human_name" "$file_specs"
   done
 }
 
@@ -487,7 +488,7 @@ function get_total_failures {
 # Get a device result file
 # Arguments:
 #   test_run_id
-#   device_session_id
+#   device_run_id
 #   device_human_name
 #   semicolon-separated string like "$file_id;$filename"
 # Returns:
@@ -495,12 +496,12 @@ function get_total_failures {
 #########################################
 function get_device_result_file {
   test_run_id="$1"
-  device_session_id="$2"
+  device_run_id="$2"
   device_human_name="$3"
   file_id=$(sed -e 's/"//g' -e 's/;.*//g' <<< "$4")
   filename=$(sed -e 's/"//g' -e 's/.*;//g' <<< "$4")
   file_item_url="${TD_CLOUD_BASE_URL}/api/me/files/$file_id/file"
-  auth_curl "$file_item_url" --fail --output "${TEST_RESULTS_DIR}/${device_session_id}_${device_human_name}_$filename"
+  auth_curl "$file_item_url" --fail --output "${TEST_RESULTS_DIR}/${device_run_id}_${device_human_name}_$filename"
 }
 
 
@@ -594,21 +595,21 @@ function release_project_configuration_lock {
 # Get all screenshots for a device
 # Arguments:
 #   test_run_id
-#   device_session_id
+#   device_run_id
 #   device_human_name
 # Returns:
 #   Void (writes files to subfolder TEST_RESULTS_DIR)
 #########################################
 function get_device_screenshots {
   test_run_id="$1"
-  device_session_id="$2"
+  device_run_id="$2"
   device_human_name="$3"
   test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
-  device_session_screenshots_url="$test_run_item_url/device-sessions/$device_session_id/screenshots"
+  device_session_screenshots_url="$test_run_item_url/device-runs/$device_session_id/screenshots"
   response=$(auth_curl "$device_session_screenshots_url")
   device_screenshot_ids=$(echo "$response" | jq '.data[] |"\(.id);\(.originalName)"')
   for screenshot_specs in $device_screenshot_ids; do
-    get_device_screenshot_file "$test_run_id" "$device_session_id" "$device_human_name" "$screenshot_specs"
+    get_device_screenshot_file "$test_run_id" "$device_run_id" "$device_human_name" "$screenshot_specs"
   done
 }
 
@@ -617,7 +618,7 @@ function get_device_screenshots {
 # Get a device screenshot file
 # Arguments:
 #   test_run_id
-#   device_session_id
+#   device_run_id
 #   device_human_name
 #   semicolon-separated string like "$file_id;$filename"
 # Returns:
@@ -625,12 +626,12 @@ function get_device_screenshots {
 #########################################
 function get_device_screenshot_file {
   test_run_id="$1"
-  device_session_id="$2"
+  device_run_id="$2"
   device_human_name="$3"
   file_id=$(sed -e 's/"//g' -e 's/;.*//g' <<< "$4")
   filename=$(sed -e 's/"//g' -e 's/.*;//g' <<< "$4")
   test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
-  file_item_url="${test_run_item_url}/device-sessions/${device_session_id}/screenshots/${file_id}"
+  file_item_url="${test_run_item_url}/device-runs/${device_session_id}/screenshots/${file_id}"
   screenshot_device_folder="${TEST_RESULTS_DIR}/screenshots/${device_human_name}"
   mkdir -p "${screenshot_device_folder}"
   auth_curl "$file_item_url" --fail --output "${screenshot_device_folder}/${filename}"
@@ -638,7 +639,7 @@ function get_device_screenshot_file {
 
 
 # Commandline arguments
-while getopts hvslu:p:t:r:a:d:c:i:z:n:x: OPTIONS; do
+while getopts hvslu:p:t:r:a:d:c:i:z:n: OPTIONS; do
   case $OPTIONS in
     z ) TEST_ARCHIVE_FOLDER=$OPTARG ;;
     u ) TD_USER=$OPTARG ;;
@@ -654,7 +655,6 @@ while getopts hvslu:p:t:r:a:d:c:i:z:n:x: OPTIONS; do
     h ) usage; exit ;;
     v ) verbose ;;
     n ) RESULTS_RUN_ID=$OPTARG ;;
-    x ) TESTDROID_SSA_CLIENT_TIMEOUT=$OPTARG ;;
     \? ) echo "Unknown option -$OPTARG" >&2 ; exit 1;;
     : ) echo "Missing required argument for -$OPTARG" >&2 ; exit 1;;
   esac
@@ -675,9 +675,6 @@ if [ -n "${RESULTS_RUN_ID}" ]; then
   get_result_files "$RESULTS_RUN_ID"
   exit
 fi
-
-if [[ ! $TESTDROID_SSA_CLIENT_TIMEOUT =~ ^[0-9]+$ ]]; then
-    echo 'Testdroid client timeout must be an integer!' ; exit 1 ; fi
 
 if [ -z "${APP_PATH}" ]; then echo "Please specify app path!" ; usage ; exit 1 ; fi
 if [ -z "${TEST_ARCHIVE_FOLDER}" ]; then echo "Please specify the folder containing the tests!" ; usage ; exit 1 ; fi
@@ -734,6 +731,9 @@ done
 
 cd $zip_temp_dir || exit 34
 
+# prevent sending old results to TD
+rm -rf results
+
 if [ ! -f "$generic_start_script" ]; then
   case "${PLATFORM}" in
     "android")
@@ -777,7 +777,7 @@ echo "test_run_id='$test_run_id'"
 release_project_configuration_lock
 
 # Get the test run device runs
-device_runs_url=$(url_from_template "${TD_TEST_DEVICE_SESSION_URL_TEMPLATE}" "${test_run_id}")
+device_runs_url=$(url_from_template "${TD_TEST_DEVICE_RUN_URL_TEMPLATE}" "${test_run_id}")
 response=$(auth_curl "${device_runs_url}")
 device_count=$(echo "$response" | jq '.total')
 prettyp "Device count for test: ${device_count}"
@@ -790,8 +790,6 @@ test_run_browser_url=$(url_from_template "${TD_TEST_RUN_ITEM_BROWSER_URL_TEMPLAT
 prettyp "Results are to be found at ${test_run_browser_url}"
 test_status=""
 connection_failures=0
-start_time=$(date +%s)
-timeout_time="$(( start_time + TESTDROID_SSA_CLIENT_TIMEOUT ))"
 while [ 1 -ne 2 ]; do
   sleep 5
 
@@ -800,17 +798,6 @@ while [ 1 -ne 2 ]; do
   if [ "${test_status}" != "${test_status_new}" ]; then
     test_status=$test_status_new
     echo ; prettyp "Test status changed: $test_status"
-  fi
-
-  if [ "$TESTDROID_SSA_CLIENT_TIMEOUT" == "0" ]; then
-    : #pass
-  elif [ "$timeout_time" -gt "$(date +%s)" ]; then
-    : #pass
-  elif [ "$( are_devices_running ${test_run_id} )" -ne "0" ]; then
-    : #pass
-  else
-    echo ; prettyp "Run execution timeouted! (timeout was ${TESTDROID_SSA_CLIENT_TIMEOUT}s)"
-    test_status="$( abort_run )"
   fi
 
   case "$(echo "$test_status" |xargs)" in
