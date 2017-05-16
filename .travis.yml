@@ -7,15 +7,15 @@ addons:
       - curl
 env:
   global: >
-    - EXAMPLE_APP_URL="https://raw.githubusercontent.com/UnityTech/GamesTestAutomationExample/master/example-unity-project/example-app.apk"
-    - TD_BUILD="example-app.apk"
+    - TD_BUILD="unity-ads/android/example/build/outputs/apk/example-debug.apk"
     - TD_RUN_NAME="Travis iTests-test No.${TRAVIS_BUILD_NUMBER} $TRAVIS_BRANCH"
     - TD_BASE_CMD_API_KEY='./testdroid_cmdline.sh -u $TD_API_TOKEN -t "$TD_PROJECT" -a "$TD_BUILD" -r "$TD_RUN_NAME" -z fake_test_dir'
     - CMD_TD_LIST_API_KEY="$TD_BASE_CMD_API_KEY -l"
     - CMD_TD_SIMULATE="$TD_BASE_CMD -d $TD_DEVICE_GROUP_ID -s"
     - CMD_TD_SIMULATE_API_KEY="$TD_BASE_CMD_API_KEY -d $TD_DEVICE_GROUP_ID -s"
 install:
-  - curl "$EXAMPLE_APP_URL" -o "$TD_BUILD"
+  - git clone https://github.com/Applifier/unity-ads unity-ads
+  - (cd unity-ads/android/example ; gradle build)
   - mkdir fake_test_dir
 script:
   - eval $CMD_TD_LIST_API_KEY
