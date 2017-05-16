@@ -10,7 +10,11 @@ echo "Extracting tests.zip..."
 unzip tests.zip
 
 echo "Starting Appium ..."
+<<<<<<< HEAD
 /opt/appium/appium/bin/appium.js --log-no-colors --log-timestamp >appium.log 2>&1 &
+=======
+appium-1.5 --log-no-colors --log-timestamp >appium.log 2>&1 &
+>>>>>>> parent of cb3ae22... Merge pull request #24 from Applifier/feature/removed_appium_start
 
 echo -n "Waiting for Appium server to be ready "
 start_string="Appium REST http interface listener started"
