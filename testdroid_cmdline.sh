@@ -393,54 +393,6 @@ function get_result_files {
   fi
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-########################################
-# Checks if there are devices with RUNNING state in the test run
-# Arguments:
-#   test_run_id
-# Returns:
-#   bool (0 for false, 1 for true)
-########################################
-function are_devices_running {
-  test_run_id=$1
-  device_runs_url=$(url_from_template "${TD_TEST_DEVICE_RUN_URL_TEMPLATE}" "${test_run_id}")
-  response=$(auth_curl "${device_runs_url}")
-  device_run_ids=$(echo "$response" | jq '.data[].id')
-  devices_are_running="0"
-
-  for device_run_id in $device_run_ids; do
-    device_info_json=$(get_device_info_json "$test_run_id" "$device_run_id")
-    device_status=$(echo "$device_info_json" |jq -r '.currentState.status')
-    device_human_name="$(get_device_human_name "$test_run_id" "$device_run_id")"
-    if [ "$device_status" == "RUNNING" ]; then
-      devices_are_running="1"
-      break
-    fi
-  done
-
-  echo "$devices_are_running"
-}
-
-########################################
-# Abort current test run
-# Arguments:
-#   None
-# Returns:
-#   Void (aborts run, prints respon)
-#########################################
-function abort_run {
-  test_run_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
-  auth_curl -X POST "${test_run_url}/abort"
-}
-
->>>>>>> parent of e7e6e7a... added results folder to cleanup list, fixed typo
-=======
->>>>>>> parent of fca0bc5... Added timeout for testdroid-ssa-client
-=======
->>>>>>> parent of fca0bc5... Added timeout for testdroid-ssa-client
 
 ########################################
 # Get all test results and files for the device
@@ -803,35 +755,6 @@ while [ 1 -ne 2 ]; do
     echo ; prettyp "Test status changed: $test_status"
   fi
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-  timeout_time="$(( start_time + TESTDROID_SSA_CLIENT_TIMEOUT ))"
-  if [ "${TESTDROID_SSA_CLIENT_TIMEOUT}" == "0" ]; then
-    : #pass
-  elif [ "$timeout_time" -gt "$(date +%s)" ]; then
-    : #pass
-  elif [ "$( are_devices_running "$test_run_id" )" -ne "0" ]; then
-    : #pass
-  else
-=======
-  if [ "${TESTDROID_SSA_CLIENT_TIMEOUT}" -ne "0" ] &&
-     [ "$(( start_time + TESTDROID_SSA_CLIENT_TIMEOUT ))" -lt "$(date +%s)" ] &&
-     [ "$( are_devices_running "$test_run_id" )" == "0" ];
-  then
->>>>>>> parent of 83f137a... Improved if block readability
-    echo "Run execution timeouted (timeout=$TESTDROID_SSA_CLIENT_TIMEOUT}s)"
-    abort_run
-    test_status="FINISHED"
-  fi
-
->>>>>>> parent of f112c0d... getting testrun status when aborting. minor cleanups
-=======
->>>>>>> parent of fca0bc5... Added timeout for testdroid-ssa-client
-=======
->>>>>>> parent of fca0bc5... Added timeout for testdroid-ssa-client
   case "$(echo "$test_status" |xargs)" in
     "FINISHED" )
 
