@@ -430,8 +430,7 @@ function are_devices_running {
 #########################################
 function abort_run {
   test_run_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
-  status=$( auth_curl -X POST "${test_run_url}/abort" | jq ".state")
-  echo "$status"
+  auth_curl -X POST "${test_run_url}/abort"
 }
 
 >>>>>>> parent of e7e6e7a... added results folder to cleanup list, fixed typo
@@ -800,6 +799,22 @@ while [ 1 -ne 2 ]; do
     echo ; prettyp "Test status changed: $test_status"
   fi
 
+<<<<<<< HEAD
+=======
+  timeout_time="$(( start_time + TESTDROID_SSA_CLIENT_TIMEOUT ))"
+  if [ "${TESTDROID_SSA_CLIENT_TIMEOUT}" == "0" ]; then
+    : #pass
+  elif [ "$timeout_time" -gt "$(date +%s)" ]; then
+    : #pass
+  elif [ "$( are_devices_running "$test_run_id" )" -ne "0" ]; then
+    : #pass
+  else
+    echo "Run execution timeouted (timeout=$TESTDROID_SSA_CLIENT_TIMEOUT}s)"
+    abort_run
+    test_status="FINISHED"
+  fi
+
+>>>>>>> parent of f112c0d... getting testrun status when aborting. minor cleanups
   case "$(echo "$test_status" |xargs)" in
     "FINISHED" )
 
