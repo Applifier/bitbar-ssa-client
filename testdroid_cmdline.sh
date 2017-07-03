@@ -49,6 +49,7 @@ PROJECT_TIMEOUT=600
 TESTDROID_SSA_CLIENT_TIMEOUT=0
 CONNECTION_FAILURES_LIMIT=20
 PROJECT_LOCK_TIMEOUT=120
+RESULT_LIMIT=0 # Limit for the result file count
 LOCK_GRACE_PERIOD=5
 INSTANCE="$(echo $HOSTNAME || tr -cd '[[:alnum:]]._-')-$RANDOM"
 
@@ -451,7 +452,7 @@ function get_device_result_files {
   device_human_name="$3"
   test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
   device_info_url="$test_run_item_url/device-sessions/$device_session_id"
-  device_session_files_url="$test_run_item_url/device-sessions/$device_session_id/output-file-set/files"
+  device_session_files_url="$test_run_item_url/device-sessions/$device_session_id/output-file-set/files?limit=${RESULT_LIMIT}"
   response=$(auth_curl "$device_session_files_url")
   device_file_ids=$(echo "$response" | jq '.data[] |"\(.id);\(.name)"')
   for file_specs in $device_file_ids; do
