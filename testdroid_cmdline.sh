@@ -409,7 +409,6 @@ function get_device_result_files {
   device_human_name="$3"
   test_run_item_url=$(url_from_template "${TD_TEST_RUN_ITEM_URL_TEMPLATE}" "${test_run_id}")
   device_info_url="$test_run_item_url/device-sessions/$device_session_id"
-  device_session_id=$(auth_curl "$device_info_url" | jq ".deviceSessionId")
   device_session_files_url="$test_run_item_url/device-sessions/$device_session_id/output-file-set/files"
   response=$(auth_curl "$device_session_files_url")
   device_file_ids=$(echo "$response" | jq '.data[] |"\(.id);\(.name)"')
