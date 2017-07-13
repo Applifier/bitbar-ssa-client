@@ -424,6 +424,8 @@ function get_device_result_files {
 #  Total count
 ########################################
 function get_total_failures {
+  tests=$(grep "tests=" ${TEST_RESULTS_DIR}/*.xml | sed s/.*tests=\"//g | sed s/\".*//g | awk '{ SUM += $1} END { print SUM }')
+  tests=${tests:=0}
   errors=$(grep "errors=" ${TEST_RESULTS_DIR}/*.xml | sed s/.*errors=\"//g | sed s/\".*//g | awk '{ SUM += $1} END { print SUM }')
   errors=${errors:=0}
   failures=$(grep "failures=" ${TEST_RESULTS_DIR}/*.xml | sed s/.*failures=\"//g | sed s/\".*//g | awk '{ SUM += $1} END { print SUM }')
@@ -431,6 +433,8 @@ function get_total_failures {
 
   if [[ $errors > 0 ]] && [[ $failures > 0 ]]; then
     echo $(($errors+$failures))
+  elif [[ $tests <= 0 ]]; then
+    echo "Error: no tests found"
   elif [[ $errors > 0 ]]; then
     echo $errors
   elif [[ $failures > 0 ]]; then
