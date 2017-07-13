@@ -433,7 +433,7 @@ function get_total_failures {
 
   if [[ $errors > 0 ]] && [[ $failures > 0 ]]; then
     echo $(($errors+$failures))
-  elif [[ $tests <= 0 ]]; then
+  elif [[ $tests -le 0 ]]; then
     echo "Error: no tests found"
   elif [[ $errors > 0 ]]; then
     echo $errors
