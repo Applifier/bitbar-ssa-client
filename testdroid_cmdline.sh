@@ -67,7 +67,14 @@ function usage(){
   echo -e "\t -l\tList Testdroid deviceGroups"
   echo -e "\t -s\tSimulate (Upload tests and app and configure project. Don't actually run test)"
   echo -e "\t -c\tSet scheduler for test, options are [PARALLEL, SERIAL, SINGLE] (default: PARALLEL)"
+  echo -e "\t -f\tSkip video files when downloading test results"
   echo -e "\t -i\tSet timeout value for project in seconds. Will use 600s (10min) unless specified"
+  echo -e "\t -x\tSet timeout value for testdroid client run. There's no timeout by default."
+  echo -e "Project timeout vs. testdroid client timeout:"
+  echo -e "\t Project timeout applies to a single device run, whereas testdroid client timeout sets"
+  echo -e "\t maximum duration for the testdroid-client run. When the client timeout is reached,"
+  echo -e "\t all the queued devices will be aborted, and the results from finished devices"
+  echo -e "\t will be fetched."
   echo -e "After test run OPTIONS:"
   echo -e "\t -n\tSpecify a testRunId, client will only fetch those results and exit (numeric id, check test results URL)"
   echo -e "Misc OPTIONS"
@@ -500,6 +507,10 @@ function get_device_result_file {
   device_human_name="$3"
   file_id=$(sed -e 's/"//g' -e 's/;.*//g' <<< "$4")
   filename=$(sed -e 's/"//g' -e 's/.*;//g' <<< "$4")
+  if [[ "$SKIP_VIDEO_RESULTS" == "1" ]] && [[ ${filename: -4} == ".mp4" ]];
+  then
+    return 0
+  fi
   file_item_url="${TD_CLOUD_BASE_URL}/api/me/files/$file_id/file"
   auth_curl "$file_item_url" --fail --output "${TEST_RESULTS_DIR}/${device_session_id}_${device_human_name}_$filename"
 }
@@ -639,7 +650,7 @@ function get_device_screenshot_file {
 
 
 # Commandline arguments
-while getopts hvslu:p:t:r:a:d:c:i:z:n:x: OPTIONS; do
+while getopts hvslfu:p:t:r:a:d:c:i:z:n:x: OPTIONS; do
   case $OPTIONS in
     z ) TEST_ARCHIVE_FOLDER=$OPTARG ;;
     u ) TD_USER=$OPTARG ;;
@@ -654,6 +665,7 @@ while getopts hvslu:p:t:r:a:d:c:i:z:n:x: OPTIONS; do
     s ) SIMULATE=1 ;;
     h ) usage; exit ;;
     v ) verbose ;;
+    f ) SKIP_VIDEO_RESULTS=1 ;;
     n ) RESULTS_RUN_ID=$OPTARG ;;
     x ) TESTDROID_SSA_CLIENT_TIMEOUT=$OPTARG ;;
     \? ) echo "Unknown option -$OPTARG" >&2 ; exit 1;;
