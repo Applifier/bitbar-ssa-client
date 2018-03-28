@@ -25,7 +25,7 @@ CLEANUP_FILES=(
   'results'
 )
 
-TD_CLOUD_BASE_URL="https://cloud.testdroid.com"
+TD_CLOUD_BASE_URL="https://cloud.bitbar.com"
 TD_TOKEN_URL="${TD_CLOUD_BASE_URL}/oauth/token"
 TD_PROJECTS_URL="${TD_CLOUD_BASE_URL}/api/v2/me/projects"
 TD_USER_DEVICE_GROUPS_URL="${TD_CLOUD_BASE_URL}/api/v2/me/device-groups?limit=999"
@@ -36,7 +36,7 @@ TD_CONFIGURE_PROJECT_URL_TEMPLATE="${TD_CLOUD_BASE_URL}/api/v2/me/projects/<proj
 TD_TEST_RUNS_URL_TEMPLATE="${TD_CLOUD_BASE_URL}/api/v2/me/projects/<projectId>/runs"
 TD_TEST_RUN_ITEM_URL_TEMPLATE="${TD_TEST_RUNS_URL_TEMPLATE}/<runId>"
 TD_TEST_DEVICE_SESSION_URL_TEMPLATE="${TD_TEST_RUN_ITEM_URL_TEMPLATE}/device-sessions"
-TD_TEST_RUN_ITEM_BROWSER_URL_TEMPLATE="https://cloud.testdroid.com/#service/testrun/<projectId>/<runId>"
+TD_TEST_RUN_ITEM_BROWSER_URL_TEMPLATE="${TD_CLOUD_BASE_URL}/#service/testrun/<projectId>/<runId>"
 TD_DEFAULT_HEADER="Accept: application/json"
 TEST_ZIP_FILE='test.zip'
 CURL_SILENT=" -s "
