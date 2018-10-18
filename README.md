@@ -1,4 +1,4 @@
-# testdroid-ssa-client
+# bitbar-ssa-client
 
 ## Usage
   ./testdroid_cmdline.sh OPTIONS
