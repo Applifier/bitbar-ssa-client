@@ -3,20 +3,20 @@
 ## Usage
   ./testdroid_cmdline.sh OPTIONS
 ## Test run OPTIONS:
-        -z	The tests-folder which will be archived and sent to testdroid (required)
+        -z	The tests-folder which will be archived and sent to Bitbar Cloud (required)
         -u	Username (required, can also use API-key here)
         -p	Password (required unless using API-key)
-        -t	Testdroid project name (required)
+        -t	Bitbar Cloud project name (required)
         -a	App build file to test (apk/ipa) (required, also selects platform)
-        -r	Testdroid test run name
-        -d	Testdroid deviceGroup ID to use (default: previous one)
-        -l	List Testdroid deviceGroups
+        -r	Bitbar Cloud test run name
+        -d	Bitbar Cloud deviceGroup ID to use (default: previous one)
+        -l	List Bitbar Cloud deviceGroups
         -s	Simulate (Upload tests and app and configure project. Don't actually run test)
         -c	Set scheduler for test, options are [PARALLEL, SERIAL, SINGLE] (default: PARALLEL)
         -i	Set timeout value for project in seconds. Will use 600s (10min) unless specified.
             NOTE: this timeout applies to a **single test run on a device**
-        -x	Set timeout value for testdroid-ssa-client in seconds (no default timeout).
-            NOTE: this timeout applies to the **entire run of testdroid-ssa-client**,
+        -x	Set timeout value for bitbar-ssa-client in seconds (no default timeout).
+            NOTE: this timeout applies to the **entire run of bitbar-ssa-client**,
             devices that tests didn't start on within this timeout will be **skipped**
 
 ## After test run OPTIONS:
