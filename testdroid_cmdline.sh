@@ -703,10 +703,10 @@ if [ -n "${RESULTS_RUN_ID}" ]; then
   exit
 fi
 
-if [[ ! $TESTDROID_SSA_CLIENT_TIMEOUT =~ ^[0-9]+$ ]]; then
+if [[ ! "$TESTDROID_SSA_CLIENT_TIMEOUT" =~ ^[0-9]+$ ]]; then
     echo 'Testdroid client timeout must be an integer!' ; exit 1 ; fi
 
-if [[ ! $AUTO_RETRY_COUNT =~ ^[0-9]+$ ]]; then
+if [[ ! -z "$AUTO_RETRY_COUNT" && ! "$AUTO_RETRY_COUNT" =~ ^[0-9]+$ ]]; then
     echo 'Auto retry count must be an integer!' ; exit 1 ; fi
 
 if [ -z "${APP_PATH}" ]; then echo "Please specify app path!" ; usage ; exit 1 ; fi
