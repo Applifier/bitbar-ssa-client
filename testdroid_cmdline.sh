@@ -70,6 +70,7 @@ function usage(){
   echo -e "\t -f\tSkip video files when downloading test results"
   echo -e "\t -i\tSet timeout value for project in seconds. Will use 600s (10min) unless specified"
   echo -e "\t -x\tSet timeout value for testdroid client run. There's no timeout by default."
+  echo -e "\t -q\tSet counter for auto retrying failed tests. Default counter value is 3."
   echo -e "Project timeout vs. testdroid client timeout:"
   echo -e "\t Project timeout applies to a single device run, whereas testdroid client timeout sets"
   echo -e "\t maximum duration for the testdroid-client run. When the client timeout is reached,"
@@ -275,10 +276,16 @@ function setup_project_settings {
   else
     flags_to_alter="${flags_to_alter} -F usedDeviceGroupId=${device_group_id}"
   fi
+
+  if [ ! -z "$AUTO_RETRY_COUNT" ]; then
+    flags_to_alter="${flags_to_alter} -F maxAutoRetriesCount=${AUTO_RETRY_COUNT}"
+  fi
+
   response=$(auth_curl -POST ${flags_to_alter} "${project_config_url}")
   used_device_group_id=$(echo "$response" | jq '.usedDeviceGroupId')
   used_scheduler=$(echo "$response" | jq -r '.scheduler')
   used_project_timeout=$(echo "$response" | jq -r '.timeout')
+  used_auto_retry_count=$(echo "$response" | jq -r '.maxAutoRetriesCount')
   if [ -n "$DEVICE_GROUP_ID" ]; then
     if [ "$used_device_group_id" == "$device_group_id" ]; then
       prettyp "Using device group $used_device_group_id"
@@ -297,6 +304,12 @@ function setup_project_settings {
     prettyp "Using timeout '$used_project_timeout'"
   else
     prettyp "Unable to set timeout '${PROJECT_TIMEOUT}' for project! Exiting. Response was '$response'"
+    exit 11
+  fi
+  if [ "$used_auto_retry_count" == "$AUTO_RETRY_COUNT" ]; then
+    prettyp "Using auto retry count '$used_auto_retry_count'"
+  else
+    prettyp "Unable to set auto retry count '${AUTO_RETRY_COUNT}' for project! Exiting. Response was '$response'"
     exit 11
   fi
 }
@@ -650,7 +663,7 @@ function get_device_screenshot_file {
 
 
 # Commandline arguments
-while getopts hvslfu:p:t:r:a:d:c:i:z:n:x: OPTIONS; do
+while getopts hvslfu:p:t:r:a:d:c:i:z:n:x:q: OPTIONS; do
   case $OPTIONS in
     z ) TEST_ARCHIVE_FOLDER=$OPTARG ;;
     u ) TD_USER=$OPTARG ;;
@@ -668,6 +681,7 @@ while getopts hvslfu:p:t:r:a:d:c:i:z:n:x: OPTIONS; do
     f ) SKIP_VIDEO_RESULTS=1 ;;
     n ) RESULTS_RUN_ID=$OPTARG ;;
     x ) TESTDROID_SSA_CLIENT_TIMEOUT=$OPTARG ;;
+    q ) AUTO_RETRY_COUNT=$OPTARG ;;
     \? ) echo "Unknown option -$OPTARG" >&2 ; exit 1;;
     : ) echo "Missing required argument for -$OPTARG" >&2 ; exit 1;;
   esac
@@ -691,6 +705,9 @@ fi
 
 if [[ ! $TESTDROID_SSA_CLIENT_TIMEOUT =~ ^[0-9]+$ ]]; then
     echo 'Testdroid client timeout must be an integer!' ; exit 1 ; fi
+
+if [[ ! $AUTO_RETRY_COUNT =~ ^[0-9]+$ ]]; then
+    echo 'Auto retry count must be an integer!' ; exit 1 ; fi
 
 if [ -z "${APP_PATH}" ]; then echo "Please specify app path!" ; usage ; exit 1 ; fi
 if [ -z "${TEST_ARCHIVE_FOLDER}" ]; then echo "Please specify the folder containing the tests!" ; usage ; exit 1 ; fi
