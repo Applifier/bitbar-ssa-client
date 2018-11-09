@@ -70,7 +70,7 @@ function usage(){
   echo -e "\t -f\tSkip video files when downloading test results"
   echo -e "\t -i\tSet timeout value for project in seconds. Will use 600s (10min) unless specified"
   echo -e "\t -x\tSet timeout value for testdroid client run. There's no timeout by default."
-  echo -e "\t -q\tSet counter for auto retrying failed tests. Default counter value is 3."
+  echo -e "\t -q\tSet counter for auto retrying failed devices. Default counter value is 3."
   echo -e "Project timeout vs. testdroid client timeout:"
   echo -e "\t Project timeout applies to a single device run, whereas testdroid client timeout sets"
   echo -e "\t maximum duration for the testdroid-client run. When the client timeout is reached,"
