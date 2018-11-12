@@ -18,6 +18,7 @@
         -x	Set timeout value for bitbar-ssa-client in seconds (no default timeout).
             NOTE: this timeout applies to the **entire run of bitbar-ssa-client**,
             devices that tests didn't start on within this timeout will be **skipped**
+        -q  Set counter for auto retrying failed test runs on devices. By default failed test run is retried 3 times.
 
 ## After test run OPTIONS:
         -n	Specify a testRunId, client will only fetch those results and exit (numeric id, check test results URL)
