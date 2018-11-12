@@ -277,7 +277,7 @@ function setup_project_settings {
     flags_to_alter="${flags_to_alter} -F usedDeviceGroupId=${device_group_id}"
   fi
 
-  if [ ! -z "$AUTO_RETRY_COUNT" ]; then
+  if [ -n "$AUTO_RETRY_COUNT" ]; then
     flags_to_alter="${flags_to_alter} -F maxAutoRetriesCount=${AUTO_RETRY_COUNT}"
   fi
 
@@ -306,11 +306,13 @@ function setup_project_settings {
     prettyp "Unable to set timeout '${PROJECT_TIMEOUT}' for project! Exiting. Response was '$response'"
     exit 11
   fi
-  if [ "$used_auto_retry_count" == "$AUTO_RETRY_COUNT" ]; then
-    prettyp "Using auto retry count '$used_auto_retry_count'"
-  else
-    prettyp "Unable to set auto retry count '${AUTO_RETRY_COUNT}' for project! Exiting. Response was '$response'"
-    exit 11
+  if [ -n "$AUTO_RETRY_COUNT" ]; then
+    if [ "$used_auto_retry_count" == "$AUTO_RETRY_COUNT" ]; then
+      prettyp "Using auto retry count '$used_auto_retry_count'"
+    else
+      prettyp "Unable to set auto retry count '${AUTO_RETRY_COUNT}' for project! Exiting. Response was '$response'"
+      exit 11
+    fi
   fi
 }
 
