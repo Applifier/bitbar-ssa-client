@@ -28,11 +28,10 @@ CLEANUP_FILES=(
 TD_CLOUD_BASE_URL="https://cloud.bitbar.com"
 TD_TOKEN_URL="${TD_CLOUD_BASE_URL}/oauth/token"
 TD_PROJECTS_URL="${TD_CLOUD_BASE_URL}/api/v2/me/projects"
-TD_USER_DEVICE_GROUPS_URL="${TD_CLOUD_BASE_URL}/api/v2/me/device-groups?limit=999"
-TD_PROJECT_DEVICE_GROUPS_URL_TEMPLATE="${TD_CLOUD_BASE_URL}/api/v2/me/projects/<projectId>/device-groups?limit=999"
-TD_UPLOAD_APP_URL_TEMPLATE="${TD_CLOUD_BASE_URL}/api/v2/me/projects/<projectId>/files/application"
-TD_UPLOAD_TEST_URL_TEMPLATE="${TD_CLOUD_BASE_URL}/api/v2/me/projects/<projectId>/files/test"
-TD_CONFIGURE_PROJECT_URL_TEMPLATE="${TD_CLOUD_BASE_URL}/api/v2/me/projects/<projectId>/config"
+TD_UPLOAD_FILE_URL="${TD_CLOUD_BASE_URL}/api/v2/me/files"
+TD_RUN_TEST_URL="${TD_CLOUD_BASE_URL}/api/v2/me/runs"
+TD_USER_DEVICE_GROUPS_URL="${TD_CLOUD_BASE_URL}/api/v2/me/device-groups?limit=0"
+TD_USER_FRAMEWORKS_URL="${TD_CLOUD_BASE_URL}/api/v2/me/available-frameworks?limit=0"
 TD_TEST_RUNS_URL_TEMPLATE="${TD_CLOUD_BASE_URL}/api/v2/me/projects/<projectId>/runs"
 TD_TEST_RUN_ITEM_URL_TEMPLATE="${TD_TEST_RUNS_URL_TEMPLATE}/<runId>"
 TD_TEST_DEVICE_SESSION_URL_TEMPLATE="${TD_TEST_RUN_ITEM_URL_TEMPLATE}/device-sessions"
@@ -58,13 +57,15 @@ function usage(){
   echo -e "usage:\n   $0 OPTIONS"
   echo -e "Test run OPTIONS:"
   echo -e "\t -z\tThe tests-folder which will be archived and sent to testdroid (required)"
+  echo -e "\t -b\tFramework id to be used (required)"
+  echo -e "\t -o\tOsType to be used (required)"
   echo -e "\t -u\tUsername (required, can also use API-key here)"
   echo -e "\t -p\tPassword (required unless using API-key)"
   echo -e "\t -t\tTestdroid project name (required)"
   echo -e "\t -a\tApp build file to test (apk/ipa) (required, also selects platform)"
   echo -e "\t -r\tTestdroid test run name"
   echo -e "\t -d\tTestdroid deviceGroup ID to use (default: previous one)"
-  echo -e "\t -l\tList Testdroid deviceGroups"
+  echo -e "\t -l\tList Testdroid deviceGroups & frameworks"
   echo -e "\t -s\tSimulate (Upload tests and app and configure project. Don't actually run test)"
   echo -e "\t -c\tSet scheduler for test, options are [PARALLEL, SERIAL, SINGLE] (default: PARALLEL)"
   echo -e "\t -f\tSkip video files when downloading test results"
@@ -82,7 +83,7 @@ function usage(){
   echo -e "\t -h\tShow this message"
   echo -e "\t -v\tVerbose"
   echo -e "Example:"
-  echo -e "\t$0 -u you@yourdomain.com -p hunter2 -t \"Example test Project\" -r \"Nightly run, Monday\" -a path/to/build.apk"
+  echo -e "\t$0 -u you@yourdomain.com -p hunter2 -t \"Example test Project\" -r \"Nightly run, Monday\" -a path/to/build.apk -o \"ANDROID\" -f 248"
 }
 
 function verbose() {
@@ -107,7 +108,7 @@ function authenticate {
   # Don't log in if using token (no password specified)
   if [ -n "$PASSWORD" ]; then
     auth_curl_data="client_id=testdroid-cloud-api&grant_type=password&username=${TD_USER}"
-      auth_curl_data="${auth_curl_data}&password=${PASSWORD}"
+    auth_curl_data="${auth_curl_data}&password=${PASSWORD}"
     curl ${CURL_SILENT} -X POST -H "${TD_DEFAULT_HEADER}" -d "${auth_curl_data}" $TD_TOKEN_URL > "${TOKEN_TMP_FILE}"
     auth_error=$(jq '.error_description' "${TOKEN_TMP_FILE}")
     if [ "${auth_error}" != "null" ]; then echo "ERROR LOGGING IN! '${auth_error}'. Please check credentials" ; exit 1 ; fi
@@ -190,7 +191,7 @@ function url_from_template {
 #########################################
 function get_project_id {
   project_name=$1
-  PROJECT_ID=$(auth_curl "${TD_PROJECTS_URL}" | jq ".data[] | select(.name==\"${project_name}\") | .id")
+  PROJECT_ID=$(auth_curl "${TD_PROJECTS_URL}?filter=s_name_eq_${project_name}" | jq ".data[0].id")
   if [ -z "${PROJECT_ID}" ]; then
     echo "Cannot read project_id for project '$project_name'"
     exit 88
@@ -207,113 +208,31 @@ function get_project_id {
 # Returns:
 #   Void (prints device groups)
 #########################################
-function list_device_groups {
-  device_group_url=$(url_from_template "${TD_PROJECT_DEVICE_GROUPS_URL_TEMPLATE}")
-  prettyp "Device groups for project: $(auth_curl "${device_group_url}" |jq "")"
+function list_device_groups_and_frameworks {
   prettyp "Device groups for user: $(auth_curl "${TD_USER_DEVICE_GROUPS_URL}" |jq "")"
+  prettyp "Frameworks for user: $(auth_curl "${TD_USER_FRAMEWORKS_URL}" |jq "")"
 }
 
 ########################################
-# Upload test application to cloud
+# Upload file to cloud
 # Arguments:
-#   full_app_path
+#   full_path
 # Returns:
-#   Void
+#   file_id
 #########################################
-function upload_app_to_cloud {
-  full_app_path=$1
-  td_upload_url=$(url_from_template "${TD_UPLOAD_APP_URL_TEMPLATE}")
-  response=$(auth_curl -POST -F file=@"${full_app_path}" "${td_upload_url}")
-  app_upload_id=$(echo "$response" | jq '.id')
-  if [ -z "$app_upload_id" ]; then
-    prettyp "ERROR: Uploading of app failed. Response was: \"$response\""
+function upload_file_to_cloud {
+  full_path=$1
+  response=$(auth_curl -POST -F file=@"${full_path}" "${TD_UPLOAD_FILE_URL}")
+  file_upload_id=$(echo "$response" | jq '.id')
+  if [ -z "$file_upload_id" ]; then
+    prettyp "ERROR: Uploading of file failed. Response was: \"$response\""
     exit 4
   fi
-  if [ "$app_upload_id" == "null" ]; then
-    prettyp "ERROR: Uploading of app failed. Response was: \"$response\""
+  if [ "$file_upload_id" == "null" ]; then
+    prettyp "ERROR: Uploading of file failed. Response was: \"$response\""
     exit 4
   fi
-  prettyp "Uploaded \"${full_app_path}\""
-}
-
-########################################
-# Upload test script archive to cloud
-# Arguments:
-#   full_test_path
-# Returns:
-#   Void
-#########################################
-function upload_test_archive_to_cloud {
-  full_test_path=$1
-  td_upload_url=$(url_from_template "${TD_UPLOAD_TEST_URL_TEMPLATE}")
-  response=$(auth_curl -POST -F file=@"${full_test_path}" "${td_upload_url}")
-  test_upload_id=$(echo "$response" | jq '.id')
-  if [ -z "$test_upload_id" ]; then
-    prettyp "ERROR: Uploading of app failed. Response was: \"$response\""
-    exit 5
-  fi
-  if [ "$test_upload_id" == "null" ]; then
-    prettyp "ERROR: Uploading of app failed. Response was: \"$response\""
-    exit 5
-  fi
-  prettyp "Uploaded \"${full_test_path}\""
-}
-
-########################################
-# Setup project for requested device group,
-# device scheduler and project timeout
-# Arguments:
-#   device_group_id
-# Returns:
-#   Void
-#########################################
-function setup_project_settings {
-  device_group_id=$1
-  project_config_url=$(url_from_template "${TD_CONFIGURE_PROJECT_URL_TEMPLATE}")
-  flags_to_alter="-F scheduler=${SCHEDULER:?} -F timeout=${PROJECT_TIMEOUT:?}"
-  if [ -z "$DEVICE_GROUP_ID" ]; then
-    prettyp "Device group id not specified, using previous value"
-  else
-    flags_to_alter="${flags_to_alter} -F usedDeviceGroupId=${device_group_id}"
-  fi
-
-  if [ -n "$AUTO_RETRY_COUNT" ]; then
-    flags_to_alter="${flags_to_alter} -F maxAutoRetriesCount=${AUTO_RETRY_COUNT}"
-  fi
-
-  response=$(auth_curl -POST ${flags_to_alter} "${project_config_url}")
-  used_device_group_id=$(echo "$response" | jq '.usedDeviceGroupId')
-  used_scheduler=$(echo "$response" | jq -r '.scheduler')
-  used_project_timeout=$(echo "$response" | jq -r '.timeout')
-  used_auto_retry_count=$(echo "$response" | jq -r '.maxAutoRetriesCount')
-  if [ -n "$DEVICE_GROUP_ID" ]; then
-    if [ "$used_device_group_id" == "$device_group_id" ]; then
-      prettyp "Using device group $used_device_group_id"
-    else
-      prettyp "Unable to set device group id for project! Exiting. Response was '$response'"
-      exit 11
-    fi
-  fi
-  if [ "$used_scheduler" == "$SCHEDULER" ]; then
-    prettyp "Using scheduler '$used_scheduler'"
-  else
-    prettyp "Unable to set scheduler '${SCHEDULER}' for project! Exiting. Response was '$response'"
-    exit 11
-  fi
-  if [ "$used_project_timeout" == "$PROJECT_TIMEOUT" ]; then
-    prettyp "Using timeout '$used_project_timeout'"
-  else
-    prettyp "Unable to set timeout '${PROJECT_TIMEOUT}' for project! Exiting. Response was '$response'"
-    exit 11
-  fi
-  if [ -n "$AUTO_RETRY_COUNT" ]; then
-    if [ "$used_auto_retry_count" == "$AUTO_RETRY_COUNT" ]; then
-      prettyp "Using auto retry count '$used_auto_retry_count'"
-    else
-      prettyp "Unable to set auto retry count '${AUTO_RETRY_COUNT}' for project! Exiting. Response was '$response'"
-      exit 11
-    fi
-  fi
+  echo "$file_upload_id"
 }
 
 ########################################
@@ -324,12 +243,12 @@ function setup_project_settings {
 #   test_run_id
 #########################################
 function start_test_run {
-  test_run_name=$1
+  JSON_STRING='{"testRunName":"'"$TEST_RUN_NAME"'","osType":"'"$OS_TYPE"'","frameworkId":"'"$FRAMEWORK_ID"'","projectId":"'"$PROJECT_ID"'","timeout":"'"$PROJECT_TIMEOUT"'","scheduler":"'"$SCHEDULER"'","deviceGroupId":"'"$DEVICE_GROUP_ID"'","maxAutoRetriesCount":"'"$AUTO_RETRY_COUNT"'","files":[{"id":"'"$1"'"},{"id":"'"$2"'"}]}'
   test_runs_url=$(url_from_template "${TD_TEST_RUNS_URL_TEMPLATE}")
-  response=$(auth_curl -POST -F name="${test_run_name}" "${test_runs_url}")
+  response=$(auth_curl -POST -H "Content-Type: application/json" --data "$JSON_STRING" "$TD_RUN_TEST_URL")
   test_run_id=$(echo "$response" | jq '.id')
   if [ -z "$test_run_id" ]; then
-    prettyp "Did not get a test_run_id. Maybe test didn't start? Response was '$response'"
+    prettyp "Did not get a test_run_id. Maybe test didn't start? Response was $response"
     exit 6
   fi
   echo "$test_run_id"
@@ -531,92 +450,6 @@ function get_device_result_file {
 }
 
 
-#########################################
-# Generate a json-string which functions as
-# lock for testdroid project configuration
-# Arguments: None
-# Retuns:
-#   JSON string which this device can use to
-#   identify itself
-#########################################
-function generate_project_configuration_lock {
-  lock_str="{\"lock_time\": $(date +%s), \"instance\": \"$INSTANCE\"}"
-  echo "$lock_str"
-}
-
-
-#########################################
-# Wait until project-configuration is available
-# for this instance and ensure that we have locked
-# the project configuration for our instance
-# Arguments: None
-# Returns:
-#   0 if successful
-#   non-zero if failure
-#########################################
-function get_project_configuration_lock {
-  prettyp "trying to get lock for '$INSTANCE'"
-  project_config_url=$(url_from_template "${TD_CONFIGURE_PROJECT_URL_TEMPLATE}")
-  mylock="$(generate_project_configuration_lock)"
-  done=false
-  while [ "$done" != "true" ]; do
-    response=$(auth_curl "${project_config_url}")
-    current_value=$(echo "$response" | jq -r '.withAnnotation')
-    # set lock if there is no lock in place
-    if [ -z "$current_value" ]; then
-      # Refresh the lock to avoid premature timeout
-      mylock="$(generate_project_configuration_lock)"
-      response=$(auth_curl -POST -F withAnnotation="$mylock" "${project_config_url}")
-    else
-      project_instance=$(echo $response |jq -r '.withAnnotation' |jq -r '.instance')
-      # If the lock is our lock then remove it. We should not be in this situation
-      if [ $project_instance == "$INSTANCE" ]; then
-        auth_curl -POST -F withAnnotation="" "${project_config_url}"
-      else
-        # Someone elses lock
-        project_lock_time=$(echo $response |jq -r '.withAnnotation' |jq -r '.lock_time')
-        current_time=$(date +%s)
-        # Remove lock if it is old enough to have timeouted
-        if [ "$((project_lock_time+PROJECT_LOCK_TIMEOUT))" -lt "$current_time" ]; then
-          prettyp "Lock timeout for '$current_value'. Removing old lock"
-          auth_curl -POST -F withAnnotation="" "${project_config_url}"
-        else
-          prettyp "Current lock is for '$project_instance', it will timeout in $((project_lock_time+PROJECT_LOCK_TIMEOUT-current_time))s"
-        fi
-      fi
-    fi
-    response=$(auth_curl "${project_config_url}")
-    current_value=$(echo "$response" | jq -r '.withAnnotation')
-    # Use a grace_period to avoid a race condition if two clients lock at once
-    if [ "$current_value" == "$mylock" ]; then
-      sleep $LOCK_GRACE_PERIOD
-      response=$(auth_curl "${project_config_url}")
-      current_value=$(echo "$response" | jq -r '.withAnnotation')
-      if [ "$current_value" == "$mylock" ]; then
-        prettyp "We got project_config lock for '$INSTANCE'"
-        done=true
-      fi
-    else
-      prettyp "We don't have the lock, waiting"
-      sleep $LOCK_GRACE_PERIOD
-    fi
-  done
-}
-
-function release_project_configuration_lock {
-  project_config_url=$(url_from_template "${TD_CONFIGURE_PROJECT_URL_TEMPLATE}")
-  response=$(auth_curl "${project_config_url}")
-  current_value=$(echo "$response" | jq -r '.withAnnotation')
-  project_instance=$(echo $response |jq -r '.withAnnotation' |jq -r '.instance')
-  if [ "$project_instance" == "$INSTANCE" ]; then
-    echo "Released project lock for instance '$INSTANCE'"
-    response=$(auth_curl -POST -F withAnnotation="" "${project_config_url}")
-  else
-    echo "Lock on server is for '$project_instance', this is '$INSTANCE', not releasing"
-  fi
-}
-
-
 ########################################
 # Get all screenshots for a device
 # Arguments:
@@ -665,7 +498,7 @@ function get_device_screenshot_file {
 
 
 # Commandline arguments
-while getopts hvslfu:p:t:r:a:d:c:i:z:n:x:q: OPTIONS; do
+while getopts hvslfu:p:t:r:a:d:c:i:z:n:x:q:b:o: OPTIONS; do
   case $OPTIONS in
     z ) TEST_ARCHIVE_FOLDER=$OPTARG ;;
     u ) TD_USER=$OPTARG ;;
@@ -674,7 +507,7 @@ while getopts hvslfu:p:t:r:a:d:c:i:z:n:x:q: OPTIONS; do
     r ) TEST_RUN_NAME=$OPTARG ;;
     a ) APP_PATH=$OPTARG ;;
     d ) DEVICE_GROUP_ID=$OPTARG ;;
-    l ) LIST_DEVICES_ONLY=1 ;;
+    l ) LIST_DEVICES_AND_FRAMEWORKS_ONLY=1 ;;
     c ) SCHEDULER=$OPTARG ;;
     i ) PROJECT_TIMEOUT=$OPTARG ;;
     s ) SIMULATE=1 ;;
@@ -684,6 +517,8 @@ while getopts hvslfu:p:t:r:a:d:c:i:z:n:x:q: OPTIONS; do
     n ) RESULTS_RUN_ID=$OPTARG ;;
     x ) TESTDROID_SSA_CLIENT_TIMEOUT=$OPTARG ;;
     q ) AUTO_RETRY_COUNT=$OPTARG ;;
+    b ) FRAMEWORK_ID=$OPTARG ;; # change the character to whatever suits you best
+    o ) OS_TYPE=$OPTARG ;;
     \? ) echo "Unknown option -$OPTARG" >&2 ; exit 1;;
     : ) echo "Missing required argument for -$OPTARG" >&2 ; exit 1;;
   esac
@@ -692,12 +527,14 @@ done
 # Check args
 if [ -z "${TD_USER}" ]; then echo "Please specify username!" ; usage ; exit 1 ; fi
 if [ -z "${PROJECT_NAME}" ]; then echo "Please specify testdroid project name!" ; usage ; exit 1 ; fi
+if [ -z "${FRAMEWORK_ID}" ]; then echo "Please specify framework id!" ; usage ; exit 1 ; fi
+if [ -z "${OS_TYPE}" ]; then echo "Please specify Os type!" ; usage ; exit 1 ; fi
 
-if [ "${LIST_DEVICES_ONLY}" == "1" ]; then
+if [ "${LIST_DEVICES_AND_FRAMEWORKS_ONLY}" == "1" ]; then
   # Check that we have jq installed, listing devices requires jq
   which jq
   if [ $? -ne 0 ]; then echo "Please install 'jq' before running script." ; usage ; exit 101; fi
-  list_device_groups ; exit 0 ;
+  list_device_groups_and_frameworks ; exit 0 ;
 fi
 
 if [ -n "${RESULTS_RUN_ID}" ]; then
@@ -785,17 +622,8 @@ FULL_TEST_PATH=$(get_full_path $TEST_ZIP_FILE)
 # Get PROJECT_ID
 get_project_id "$PROJECT_NAME"
 
-# Lock project configuration
-get_project_configuration_lock
-
-# Upload app to testdroid cloud
-upload_app_to_cloud "$FULL_APP_PATH"
-
-# Upload test-archive to testdroid cloud
-upload_test_archive_to_cloud "$FULL_TEST_PATH"
-
-# Configure project (device_group_id)
-setup_project_settings "$DEVICE_GROUP_ID"
+APP_ID=$(upload_file_to_cloud "$FULL_APP_PATH")
+TEST_ID=$(upload_file_to_cloud "$FULL_TEST_PATH")
 
 if [ "$SIMULATE" -eq "1" ]; then
   prettyp "Simulated run, not actually starting test"
@@ -804,9 +632,8 @@ if [ "$SIMULATE" -eq "1" ]; then
 fi
 
 # Start test run
-test_run_id=$(start_test_run "$TEST_RUN_NAME")
+test_run_id=$(start_test_run "$APP_ID" "$TEST_ID")
 echo "test_run_id='$test_run_id'"
-release_project_configuration_lock
 
 # Get the test run device runs
 device_runs_url=$(url_from_template "${TD_TEST_DEVICE_SESSION_URL_TEMPLATE}" "${test_run_id}")

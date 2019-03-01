@@ -5,3 +5,4 @@ testzip/*
 results/
 appium.log
 
+.idea
