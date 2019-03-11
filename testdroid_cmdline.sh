@@ -243,7 +243,7 @@ function upload_file_to_cloud {
 #   test_run_id
 #########################################
 function start_test_run {
-  JSON_STRING='{"testRunName":"'"$TEST_RUN_NAME"'","osType":"'"$OS_TYPE"'","frameworkId":"'"$FRAMEWORK_ID"'","projectId":"'"$PROJECT_ID"'","timeout":"'"$PROJECT_TIMEOUT"'","scheduler":"'"$SCHEDULER"'","deviceGroupId":"'"$DEVICE_GROUP_ID"'","maxAutoRetriesCount":"'"$AUTO_RETRY_COUNT"'","files":[{"id":"'"$1"'"},{"id":"'"$2"'"}]}'
+  JSON_STRING='{"testRunName":"'"$TEST_RUN_NAME"'","osType":"'"$OS_TYPE"'","frameworkId":"'"$FRAMEWORK_ID"'","projectId":"'"$PROJECT_ID"'","timeout":"'"$PROJECT_TIMEOUT"'","scheduler":"'"$SCHEDULER"'","deviceGroupId":"'"$DEVICE_GROUP_ID"'","maxAutoRetriesCount":"'"$AUTO_RETRY_COUNT"'","files":[{"id":"'"$1"'","action":"INSTALL"},{"id":"'"$2"'","action":"RUN_TEST"}]}'
   test_runs_url=$(url_from_template "${TD_TEST_RUNS_URL_TEMPLATE}")
   response=$(auth_curl -POST -H "Content-Type: application/json" --data "$JSON_STRING" "$TD_RUN_TEST_URL")
   test_run_id=$(echo "$response" | jq '.id')
