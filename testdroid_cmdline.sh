@@ -47,9 +47,7 @@ TEST_RESULTS_DIR="results"
 PROJECT_TIMEOUT=600
 TESTDROID_SSA_CLIENT_TIMEOUT=0
 CONNECTION_FAILURES_LIMIT=20
-PROJECT_LOCK_TIMEOUT=120
 RESULT_LIMIT=0 # Limit for the result file count
-LOCK_GRACE_PERIOD=5
 INSTANCE="$(echo $HOSTNAME || tr -cd '[[:alnum:]]._-')-$RANDOM"
 
 # Helper Functions
@@ -243,7 +241,10 @@ function upload_file_to_cloud {
 #   test_run_id
 #########################################
 function start_test_run {
-  JSON_STRING='{"testRunName":"'"$TEST_RUN_NAME"'","osType":"'"$OS_TYPE"'","frameworkId":"'"$FRAMEWORK_ID"'","projectId":"'"$PROJECT_ID"'","timeout":"'"$PROJECT_TIMEOUT"'","scheduler":"'"$SCHEDULER"'","deviceGroupId":"'"$DEVICE_GROUP_ID"'","maxAutoRetriesCount":"'"$AUTO_RETRY_COUNT"'","files":[{"id":"'"$1"'","action":"INSTALL"},{"id":"'"$2"'","action":"RUN_TEST"}]}'
+  JSON_STRING='{"testRunName":"'"$TEST_RUN_NAME"'","osType":"'"$OS_TYPE"'","frameworkId":"'"$FRAMEWORK_ID"'",
+    "projectId":"'"$PROJECT_ID"'","timeout":"'"$PROJECT_TIMEOUT"'","scheduler":"'"$SCHEDULER"'",
+    "deviceGroupId":"'"$DEVICE_GROUP_ID"'","maxAutoRetriesCount":"'"$AUTO_RETRY_COUNT"'",
+    "files":[{"id":"'"$1"'","action":"INSTALL"},{"id":"'"$2"'","action":"RUN_TEST"}]}'
   test_runs_url=$(url_from_template "${TD_TEST_RUNS_URL_TEMPLATE}")
   response=$(auth_curl -POST -H "Content-Type: application/json" --data "$JSON_STRING" "$TD_RUN_TEST_URL")
   test_run_id=$(echo "$response" | jq '.id')
@@ -627,7 +628,6 @@ TEST_ID=$(upload_file_to_cloud "$FULL_TEST_PATH")
 
 if [ "$SIMULATE" -eq "1" ]; then
   prettyp "Simulated run, not actually starting test"
-  release_project_configuration_lock
   exit 0
 fi
 
