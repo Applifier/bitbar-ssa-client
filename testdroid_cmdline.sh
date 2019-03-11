@@ -398,7 +398,7 @@ function get_device_result_files {
   response=$(auth_curl "$device_session_files_url")
   device_file_ids=$(echo "$response" | jq '.data[] |"\(.id);\(.name)"')
   for file_specs in $device_file_ids; do
-    get_device_result_file "$test_run_id" "$device_session_id" "$device_human_name" "$file_specs"
+    get_device_result_file "$test_run_id" "$device_session_id" "$device_human_name" "$file_specs" --location
   done
 }
 
@@ -447,7 +447,7 @@ function get_device_result_file {
     return 0
   fi
   file_item_url="${TD_CLOUD_BASE_URL}/api/me/files/$file_id/file"
-  auth_curl "$file_item_url" --fail --output "${TEST_RESULTS_DIR}/${device_session_id}_${device_human_name}_$filename"
+  auth_curl "$file_item_url" --fail --output "${TEST_RESULTS_DIR}/${device_session_id}_${device_human_name}_$filename" --location 
 }
 
 
