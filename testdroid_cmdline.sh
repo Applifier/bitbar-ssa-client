@@ -55,8 +55,7 @@ function usage(){
   echo -e "usage:\n   $0 OPTIONS"
   echo -e "Test run OPTIONS:"
   echo -e "\t -z\tThe tests-folder which will be archived and sent to testdroid (required)"
-  echo -e "\t -b\tFramework id to be used (required)"
-  echo -e "\t -o\tOsType to be used (required)"
+  echo -e "\t -w\tFramework id to be used (required)"
   echo -e "\t -u\tUsername (required, can also use API-key here)"
   echo -e "\t -p\tPassword (required unless using API-key)"
   echo -e "\t -t\tTestdroid project name (required)"
@@ -502,7 +501,7 @@ function get_device_screenshot_file {
 
 
 # Commandline arguments
-while getopts hvslfu:p:t:r:a:d:c:i:z:n:x:q:b:o: OPTIONS; do
+while getopts hvslfu:p:t:r:a:d:c:i:z:n:x:q:w: OPTIONS; do
   case $OPTIONS in
     z ) TEST_ARCHIVE_FOLDER=$OPTARG ;;
     u ) TD_USER=$OPTARG ;;
@@ -521,8 +520,7 @@ while getopts hvslfu:p:t:r:a:d:c:i:z:n:x:q:b:o: OPTIONS; do
     n ) RESULTS_RUN_ID=$OPTARG ;;
     x ) TESTDROID_SSA_CLIENT_TIMEOUT=$OPTARG ;;
     q ) AUTO_RETRY_COUNT=$OPTARG ;;
-    b ) FRAMEWORK_ID=$OPTARG ;;
-    o ) OS_TYPE=$OPTARG ;;
+    w ) FRAMEWORK_ID=$OPTARG ;;
     \? ) echo "Unknown option -$OPTARG" >&2 ; exit 1;;
     : ) echo "Missing required argument for -$OPTARG" >&2 ; exit 1;;
   esac
@@ -532,7 +530,6 @@ done
 if [ -z "${TD_USER}" ]; then echo "Please specify username!" ; usage ; exit 1 ; fi
 if [ -z "${PROJECT_NAME}" ]; then echo "Please specify testdroid project name!" ; usage ; exit 1 ; fi
 if [ -z "${FRAMEWORK_ID}" ]; then echo "Please specify framework id!" ; usage ; exit 1 ; fi
-if [ -z "${OS_TYPE}" ]; then echo "Please specify Os type!" ; usage ; exit 1 ; fi
 
 if [ "${LIST_DEVICES_AND_FRAMEWORKS_ONLY}" == "1" ]; then
   # Check that we have jq installed, listing devices requires jq
@@ -567,9 +564,11 @@ else
   extension=${FULL_APP_PATH##*.}
   case "${extension}" in
     "apk" )
-      PLATFORM="android" ;;
+      PLATFORM="android"
+      OS_TYPE="ANDROID" ;;
     "ipa" )
-      PLATFORM="ios" ;;
+      PLATFORM="ios"
+      OS_TYPE="IOS" ;;
     * )
       prettyp "Cannot handle unexpected platform with extension ${extension}"
       exit 12 ;;
