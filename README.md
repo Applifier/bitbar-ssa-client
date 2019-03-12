@@ -8,6 +8,7 @@
         -p	Password (required unless using API-key)
         -t	Bitbar Cloud project name (required)
         -a	App build file to test (apk/ipa) (required, also selects platform)
+        -w	Framework id to be used (required, check Bitbar API for available values)
         -r	Bitbar Cloud test run name
         -d	Bitbar Cloud deviceGroup ID to use (default: previous one)
         -l	List Bitbar Cloud deviceGroups
