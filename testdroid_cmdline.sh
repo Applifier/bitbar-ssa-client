@@ -236,20 +236,23 @@ function upload_file_to_cloud {
 ########################################
 # Start test run
 # Arguments:
-#   test_run_name
+#   test_app_id
+#   test_bundle_id
 # Returns:
 #   test_run_id
 #########################################
 function start_test_run {
+  test_app_id="$1"
+  test_bundle_id="$2"
   JSON_STRING='{"testRunName":"'"$TEST_RUN_NAME"'","osType":"'"$OS_TYPE"'","frameworkId":"'"$FRAMEWORK_ID"'",
     "projectId":"'"$PROJECT_ID"'","timeout":"'"$PROJECT_TIMEOUT"'","scheduler":"'"$SCHEDULER"'",
     "deviceGroupId":"'"$DEVICE_GROUP_ID"'","maxAutoRetriesCount":"'"$AUTO_RETRY_COUNT"'",
-    "files":[{"id":"'"$1"'","action":"INSTALL"},{"id":"'"$2"'","action":"RUN_TEST"}]}'
+    "files":[{"id":"'"$test_app_id"'","action":"INSTALL"},{"id":"'"$test_bundle_id"'","action":"RUN_TEST"}]}'
   test_runs_url=$(url_from_template "${TD_TEST_RUNS_URL_TEMPLATE}")
   response=$(auth_curl -POST -H "Content-Type: application/json" --data "$JSON_STRING" "$TD_RUN_TEST_URL")
   test_run_id=$(echo "$response" | jq '.id')
   if [ -z "$test_run_id" ]; then
-    prettyp "Did not get a test_run_id. Maybe test didn't start? Response was $response"
+    prettyp "Did not get a test_run_id. Maybe test didn't start? Response was '$response'"
     exit 6
   fi
   echo "$test_run_id"
@@ -447,7 +450,7 @@ function get_device_result_file {
     return 0
   fi
   file_item_url="${TD_CLOUD_BASE_URL}/api/me/files/$file_id/file"
-  auth_curl "$file_item_url" --fail --output "${TEST_RESULTS_DIR}/${device_session_id}_${device_human_name}_$filename" --location 
+  auth_curl "$file_item_url" --fail --output "${TEST_RESULTS_DIR}/${device_session_id}_${device_human_name}_$filename" --location
 }
 
 
@@ -518,7 +521,7 @@ while getopts hvslfu:p:t:r:a:d:c:i:z:n:x:q:b:o: OPTIONS; do
     n ) RESULTS_RUN_ID=$OPTARG ;;
     x ) TESTDROID_SSA_CLIENT_TIMEOUT=$OPTARG ;;
     q ) AUTO_RETRY_COUNT=$OPTARG ;;
-    b ) FRAMEWORK_ID=$OPTARG ;; # change the character to whatever suits you best
+    b ) FRAMEWORK_ID=$OPTARG ;;
     o ) OS_TYPE=$OPTARG ;;
     \? ) echo "Unknown option -$OPTARG" >&2 ; exit 1;;
     : ) echo "Missing required argument for -$OPTARG" >&2 ; exit 1;;
@@ -623,8 +626,8 @@ FULL_TEST_PATH=$(get_full_path $TEST_ZIP_FILE)
 # Get PROJECT_ID
 get_project_id "$PROJECT_NAME"
 
-APP_ID=$(upload_file_to_cloud "$FULL_APP_PATH")
-TEST_ID=$(upload_file_to_cloud "$FULL_TEST_PATH")
+TEST_APP_ID=$(upload_file_to_cloud "$FULL_APP_PATH")
+TEST_BUNDLE_ID=$(upload_file_to_cloud "$FULL_TEST_PATH")
 
 if [ "$SIMULATE" -eq "1" ]; then
   prettyp "Simulated run, not actually starting test"
@@ -632,7 +635,7 @@ if [ "$SIMULATE" -eq "1" ]; then
 fi
 
 # Start test run
-test_run_id=$(start_test_run "$APP_ID" "$TEST_ID")
+test_run_id=$(start_test_run "$TEST_APP_ID" "$TEST_BUNDLE_ID")
 echo "test_run_id='$test_run_id'"
 
 # Get the test run device runs
