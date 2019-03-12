@@ -411,9 +411,9 @@ function get_device_result_files {
 #  Total count
 ########################################
 function get_total_failures {
-  errors=$(grep "errors=" ${TEST_RESULTS_DIR}/*.xml | sed s/.*errors=\"//g | sed s/\".*//g | awk '{ SUM += $1} END { print SUM }')
+  errors=$(grep "testsuites.*errors=" ${TEST_RESULTS_DIR}/*.xml | sed s/.*errors=\"//g | sed s/\".*//g | awk '{ SUM += $1 } END { print SUM }')
   errors=${errors:=0}
-  failures=$(grep "failures=" ${TEST_RESULTS_DIR}/*.xml | sed s/.*failures=\"//g | sed s/\".*//g | awk '{ SUM += $1} END { print SUM }')
+  failures=$(grep "testsuites.*failures=" ${TEST_RESULTS_DIR}/*.xml | sed s/.*failures=\"//g | sed s/\".*//g | awk '{ SUM += $1 } END { print SUM }')
   failures=${failures:=0}
 
   if [[ $errors > 0 ]] && [[ $failures > 0 ]]; then
